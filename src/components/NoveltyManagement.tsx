@@ -84,19 +84,8 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
 
     setNovelties([...novelties, newNovelty]);
 
-    // Update employee's worked days only for deductions
-    if (isDeduction) {
-      const updatedEmployees = employees.map(emp => {
-        if (emp.id === formData.employeeId) {
-          return {
-            ...emp,
-            workedDays: Math.max(0, emp.workedDays - parseFloat(formData.discountDays))
-          };
-        }
-        return emp;
-      });
-      setEmployees(updatedEmployees);
-    }
+    // Note: We no longer update employee's total worked days here
+    // The monthly calculation will handle absences per month
 
     setFormData({
       employeeId: '',
@@ -116,20 +105,8 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     if (confirm('¿Estás seguro de que quieres eliminar esta novedad?')) {
       setNovelties(novelties.filter(n => n.id !== noveltyId));
       
-      // Restore employee's worked days only for deductions
-      const noveltyType = noveltyTypes.find(t => t.value === novelty.type);
-      if (noveltyType?.isDeduction) {
-        const updatedEmployees = employees.map(emp => {
-          if (emp.id === novelty.employeeId) {
-            return {
-              ...emp,
-              workedDays: Math.min(30, emp.workedDays + novelty.discountDays)
-            };
-          }
-          return emp;
-        });
-        setEmployees(updatedEmployees);
-      }
+      // Note: We no longer update employee's total worked days here
+      // The monthly calculation will handle absences per month
     }
   };
 
@@ -205,19 +182,8 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     if (newNovelties.length > 0) {
       setNovelties([...novelties, ...newNovelties]);
       
-      // Update employees' worked days
-      if (Object.keys(employeeUpdates).length > 0) {
-        const updatedEmployees = employees.map(emp => {
-          if (employeeUpdates[emp.id]) {
-            return {
-              ...emp,
-              workedDays: Math.max(0, emp.workedDays - employeeUpdates[emp.id])
-            };
-          }
-          return emp;
-        });
-        setEmployees(updatedEmployees);
-      }
+      // Note: We no longer update employee's total worked days here
+      // The monthly calculation will handle absences per month
       
       setBulkNoveltyData({});
       setEditingEmployees(new Set());

@@ -17,40 +17,35 @@ function App() {
   const [deductionRates, setDeductionRates] = useState<DeductionRates>(DEFAULT_DEDUCTION_RATES);
 
   // Update worked days for all employees based on current date
-  // React.useEffect(() => {
-  //   const updateWorkedDays = () => {
-  //     const updatedEmployees = employees.map(employee => {
-  //       if (!employee.createdDate) return employee;
+  React.useEffect(() => {
+    const updateWorkedDays = () => {
+      const updatedEmployees = employees.map(employee => {
+        if (!employee.createdDate) return employee;
         
-  //       const created = new Date(employee.createdDate);
-  //       const now = new Date();
+        const created = new Date(employee.createdDate);
+        const now = new Date();
         
-  //       // Colombia timezone offset (UTC-5)
-  //       const colombiaOffset = -5 * 60;
-  //       const createdColombia = new Date(created.getTime() + (colombiaOffset * 60 * 1000));
-  //       const nowColombia = new Date(now.getTime() + (colombiaOffset * 60 * 1000));
+        // Colombia timezone offset (UTC-5)
+        const colombiaOffset = -5 * 60;
+        const createdColombia = new Date(created.getTime() + (colombiaOffset * 60 * 1000));
+        const nowColombia = new Date(now.getTime() + (colombiaOffset * 60 * 1000));
         
-  //       const diffTime = nowColombia.getTime() - createdColombia.getTime();
-  //       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  //       const workedDays = Math.max(1, Math.min(30, diffDays));
+        const diffTime = nowColombia.getTime() - createdColombia.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const workedDays = Math.max(1, diffDays); // Remove the 30-day limit for total worked days
         
-  //       // Subtract any novelty deductions
-  //       const employeeNovelties = novelties.filter(n => n.employeeId === employee.id);
-  //       const discountedDays = employeeNovelties.reduce((sum, n) => sum + n.discountDays, 0);
-  //       const finalWorkedDays = Math.max(0, workedDays - discountedDays);
-        
-  //       return { ...employee, workedDays: finalWorkedDays };
-  //     });
+        return { ...employee, workedDays };
+      });
       
-  //     setEmployees(updatedEmployees);
-  //   };
+      setEmployees(updatedEmployees);
+    };
 
-  //   // Update worked days every hour
-  //   const interval = setInterval(updateWorkedDays, 60 * 60 * 1000);
-  //   updateWorkedDays(); // Initial update
+    // Update worked days every hour
+    const interval = setInterval(updateWorkedDays, 60 * 60 * 1000);
+    updateWorkedDays(); // Initial update
     
-  //   return () => clearInterval(interval);
-  // }, [employees.length, novelties]); // Only depend on employee count and novelties
+    return () => clearInterval(interval);
+  }, [employees.length]); // Only depend on employee count, not novelties
 
   const renderActiveSection = () => {
     switch (activeSection) {

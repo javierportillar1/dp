@@ -30,24 +30,25 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       const employeeNovelties = novelties.filter(n => n.employeeId === employee.id);
       const employeeAdvances = advances.filter(a => a.employeeId === employee.id && a.month === selectedMonth);
       
-      // Calculate worked days based on employee's actual worked days and novelty deductions
-      const discountedDays = employeeNovelties.reduce((sum, n) => sum + n.discountDays, 0);
-      const workedDays = Math.max(0, employee.workedDays - discountedDays);
+      // Calculate worked days for the month (30 days by default, minus absences from THIS month)
+      const monthlyNovelties = employeeNovelties.filter(n => n.date.startsWith(selectedMonth));
+      const monthlyDiscountedDays = monthlyNovelties.reduce((sum, n) => sum + n.discountDays, 0);
+      const workedDaysThisMonth = Math.max(0, 30 - monthlyDiscountedDays);
       
       // Calculate daily salary
       const dailySalary = employee.salary / 30;
       
-      // Calculate gross salary based on worked days
-      const grossSalary = dailySalary * workedDays;
+      // Calculate gross salary based on worked days this month
+      const grossSalary = dailySalary * workedDaysThisMonth;
       
       // Transport allowance (only for NOMINA employees earning less than 2 minimum salaries)
       const transportAllowance = (
         employee.contractType === 'NOMINA' && 
         employee.salary < (MINIMUM_SALARY_COLOMBIA * 2)
-      ) ? (deductionRates.transportAllowance * workedDays) / 30 : 0;
+      ) ? (deductionRates.transportAllowance * workedDaysThisMonth) / 30 : 0;
       
-      // Calculate bonuses from novelties
-      const bonuses = employeeNovelties.reduce((sum, n) => sum + n.bonusAmount, 0);
+      // Calculate bonuses from novelties of this month
+      const bonuses = monthlyNovelties.reduce((sum, n) => sum + n.bonusAmount, 0);
       
       // Calculate deductions using configurable rates
       const healthDeduction = grossSalary * (deductionRates.health / 100);
@@ -63,9 +64,9 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       
       return {
         employee,
-        workedDays,
+        workedDays: workedDaysThisMonth,
         baseSalary: employee.salary,
-        discountedDays,
+        discountedDays: monthlyDiscountedDays,
         transportAllowance,
         grossSalary,
         bonuses,
@@ -77,7 +78,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
           total: totalDeductions,
         },
         netSalary,
-        novelties: employeeNovelties,
+        novelties: monthlyNovelties,
       };
     });
     
@@ -102,7 +103,8 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       txtContent += `   Cédula: ${calc.employee.cedula}\n`;
       txtContent += `   Contrato: ${calc.employee.contractType}\n`;
       txtContent += `   Salario Base: $${calc.baseSalary.toLocaleString()}\n`;
-      txtContent += `   Días Trabajados: ${calc.workedDays}/${calc.employee.workedDays}\n`;
+      txtContent += `   Días Trabajados del Mes: ${calc.workedDays}/30\n`;
+      txtContent += `   Días Trabajados Totales: ${calc.employee.workedDays}\n`;
       txtContent += `   Días Descontados: ${calc.discountedDays}\n`;
       txtContent += `   Salario Bruto: $${calc.grossSalary.toLocaleString()}\n`;
       txtContent += `   Auxilio Transporte: $${calc.transportAllowance.toLocaleString()}\n`;
@@ -288,7 +290,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div>
-                        <span className="font-medium">{calc.workedDays}/{calc.employee.workedDays}</span>
+                        <span className="font-medium">{calc.workedDays}/30</span>
                         {calc.discountedDays > 0 && (
                           <div className="text-red-600 text-xs">
                             -{calc.discountedDays} días descontados

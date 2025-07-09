@@ -8,27 +8,24 @@ interface EmployeeManagementProps {
 }
 
 // Helper function to calculate worked days from creation date
-// The logic that used the current date has been commented out for testing
+// This calculates total worked days since hiring date
 
 const calculateWorkedDays = (createdDate?: string): number => {
-  // if (!createdDate) return 1; // Default for existing employees
+  if (!createdDate) return 1; // Default for existing employees
   
-  // const created = new Date(createdDate);
-  // const now = new Date();
+  const created = new Date(createdDate);
+  const now = new Date();
   
-  // // Set both dates to Colombia timezone (UTC-5)
-  // const colombiaOffset = -5 * 60; // -5 hours in minutes
-  // const createdColombia = new Date(created.getTime() + (colombiaOffset * 60 * 1000));
-  // const nowColombia = new Date(now.getTime() + (colombiaOffset * 60 * 1000));
+  // Set both dates to Colombia timezone (UTC-5)
+  const colombiaOffset = -5 * 60; // -5 hours in minutes
+  const createdColombia = new Date(created.getTime() + (colombiaOffset * 60 * 1000));
+  const nowColombia = new Date(now.getTime() + (colombiaOffset * 60 * 1000));
   
-  // // Calculate difference in days
-  // const diffTime = nowColombia.getTime() - createdColombia.getTime();
-  // const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // Calculate difference in days
+  const diffTime = nowColombia.getTime() - createdColombia.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
-  // return Math.max(1, Math.min(30, diffDays)); // Between 1 and 30 days
-  if (!createdDate) return 30;
-  const date = new Date(createdDate);
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  return Math.max(1, diffDays); // Total days worked since hiring
 };
 
 export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, setEmployees }) => {
@@ -322,7 +319,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
               </div>
               <div className="pt-2 border-t">
                 <p className="text-gray-600">Salario: <span className="font-semibold">${employee.salary.toLocaleString()}</span></p>
-                <p className="text-gray-600">Días trabajados: <span className="font-semibold">{employee.workedDays}</span></p>
+                <p className="text-gray-600">Días trabajados totales: <span className="font-semibold">{employee.workedDays}</span></p>
               </div>
             </div>
           </div>
