@@ -26,6 +26,7 @@ export interface Novelty {
 export interface PayrollCalculation {
   employee: Employee;
   workedDays: number;
+  totalDaysInMonth: number;
   baseSalary: number;
   discountedDays: number;
   transportAllowance: number;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, CreditCard, User, Calendar, DollarSign, Trash2, Edit, Save, X } from 'lucide-react';
 import { Employee, AdvancePayment } from '../types';
+import { formatMonthYear } from '../utils/dateUtils';
 
 interface AdvanceManagementProps {
   employees: Employee[];
@@ -168,7 +169,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
       <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg">
         <div className="flex items-center space-x-2 mb-2">
           <CreditCard className="h-6 w-6" />
-          <span className="text-lg font-medium">Total Adelantos - {selectedMonth}</span>
+          <span className="text-lg font-medium">Total Adelantos - {formatMonthYear(selectedMonth)}</span>
         </div>
         <p className="text-3xl font-bold">${totalAdvances.toLocaleString()}</p>
         <p className="text-purple-100 text-sm">
@@ -182,7 +183,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
           <div className="px-6 py-4 border-b border-gray-200 bg-blue-50">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold text-blue-900">
-                Empleados sin Adelantos - {selectedMonth}
+                Empleados sin Adelantos - {formatMonthYear(selectedMonth)}
               </h3>
               {Object.keys(bulkAdvanceData).length > 0 && (
                 <button
@@ -255,7 +256,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
         <div className="bg-white rounded-lg shadow-md border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200 bg-green-50">
             <h3 className="text-lg font-semibold text-green-900">
-              Empleados con Adelantos Registrados - {selectedMonth}
+              Empleados con Adelantos Registrados - {formatMonthYear(selectedMonth)}
             </h3>
           </div>
           

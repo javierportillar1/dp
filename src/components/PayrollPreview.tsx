@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileText, User, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 import { PayrollCalculation, AdvancePayment } from '../types';
+import { formatMonthYear } from '../utils/dateUtils';
 
 interface PayrollPreviewProps {
   payrollCalculations: PayrollCalculation[];
@@ -100,7 +101,7 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Días Trabajados</span>
                     <span className="font-medium">
-                      {calc.workedDays}/30
+                      {calc.workedDays}/{calc.totalDaysInMonth}
                       {calc.discountedDays > 0 && (
                         <span className="text-red-600 ml-1">(-{calc.discountedDays})</span>
                       )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calculator, Download, AlertCircle, TrendingUp, CreditCard } from 'lucide-react';
 import { Employee, Novelty, PayrollCalculation, AdvancePayment, DeductionRates, MINIMUM_SALARY_COLOMBIA, TRANSPORT_ALLOWANCE } from '../types';
+import { getDaysInMonth, formatMonthYear, parseMonthString } from '../utils/dateUtils';
 
 interface PayrollCalculatorProps {
   employees: Employee[];
@@ -26,17 +27,20 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
   const calculatePayroll = () => {
     setIsCalculating(true);
     
+    const { year, month } = parseMonthString(selectedMonth);
+    const daysInMonth = getDaysInMonth(year, month);
+    
     const calculations: PayrollCalculation[] = employees.map(employee => {
       const employeeNovelties = novelties.filter(n => n.employeeId === employee.id);
       const employeeAdvances = advances.filter(a => a.employeeId === employee.id && a.month === selectedMonth);
       
-      // Calculate worked days for the month (30 days by default, minus absences from THIS month)
+      // Calculate worked days for the month (total days in month, minus absences from THIS month)
       const monthlyNovelties = employeeNovelties.filter(n => n.date.startsWith(selectedMonth));
       const monthlyDiscountedDays = monthlyNovelties.reduce((sum, n) => sum + n.discountDays, 0);
-      const workedDaysThisMonth = Math.max(0, 30 - monthlyDiscountedDays);
+      const workedDaysThisMonth = Math.max(0, daysInMonth - monthlyDiscountedDays);
       
       // Calculate daily salary
-      const dailySalary = employee.salary / 30;
+      const dailySalary = employee.salary / 30; // Always use 30 for daily salary calculation
       
       // Calculate gross salary based on worked days this month
       const grossSalary = dailySalary * workedDaysThisMonth;
@@ -65,6 +69,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       return {
         employee,
         workedDays: workedDaysThisMonth,
+        totalDaysInMonth: daysInMonth,
         baseSalary: employee.salary,
         discountedDays: monthlyDiscountedDays,
         transportAllowance,
@@ -88,9 +93,13 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
 
   const exportToTxt = () => {
     const date = new Date(selectedDate);
-    const month = selectedMonth;
-    let txtContent = `NOMINA - ${month}\n`;
+    const monthFormatted = formatMonthYear(selectedMonth);
+    const { year, month } = parseMonthString(selectedMonth);
+    const daysInMonth = getDaysInMonth(year, month);
+    
+    let txtContent = `NOMINA - ${monthFormatted}\n`;
     txtContent += `Fecha de procesamiento: ${date.toLocaleDateString()}\n`;
+    txtContent += `Días del mes: ${daysInMonth}\n`;
     txtContent += `Configuración de deducciones:\n`;
     txtContent += `  - Salud: ${deductionRates.health}%\n`;
     txtContent += `  - Pensión: ${deductionRates.pension}%\n`;
@@ -103,7 +112,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       txtContent += `   Cédula: ${calc.employee.cedula}\n`;
       txtContent += `   Contrato: ${calc.employee.contractType}\n`;
       txtContent += `   Salario Base: $${calc.baseSalary.toLocaleString()}\n`;
-      txtContent += `   Días Trabajados del Mes: ${calc.workedDays}/30\n`;
+      txtContent += `   Días Trabajados del Mes: ${calc.workedDays}/${calc.totalDaysInMonth}\n`;
       txtContent += `   Días Trabajados Totales: ${calc.employee.workedDays}\n`;
       txtContent += `   Días Descontados: ${calc.discountedDays}\n`;
       txtContent += `   Salario Bruto: $${calc.grossSalary.toLocaleString()}\n`;
@@ -207,7 +216,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       {payrollCalculations.length > 0 && (
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Resumen de Nómina - {selectedMonth}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Resumen de Nómina - {formatMonthYear(selectedMonth)}</h3>
             <button
               onClick={exportToTxt}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
@@ -290,7 +299,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div>
-                        <span className="font-medium">{calc.workedDays}/30</span>
+                        <span className="font-medium">{calc.workedDays}/{calc.totalDaysInMonth}</span>
                         {calc.discountedDays > 0 && (
                           <div className="text-red-600 text-xs">
                             -{calc.discountedDays} días descontados
