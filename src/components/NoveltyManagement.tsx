@@ -372,35 +372,67 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
             </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pendingNovelties.map((pending) => {
-              const employee = employees.find(emp => emp.id === pending.employeeId);
-              const Icon = pending.categoryIcon;
-              
-              return (
-                <div key={pending.id} className="bg-white border border-yellow-300 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center space-x-2">
-                      <Icon className="h-4 w-4 text-gray-600" />
-                      <span className="font-medium text-gray-900">{employee?.name}</span>
+          <div className="space-y-4">
+            {(() => {
+              // Agrupar novedades pendientes por empleado
+              const groupedPending = pendingNovelties.reduce((acc, pending) => {
+                if (!acc[pending.employeeId]) {
+                  acc[pending.employeeId] = [];
+                }
+                acc[pending.employeeId].push(pending);
+                return acc;
+              }, {} as Record<string, PendingNovelty[]>);
+
+              return Object.entries(groupedPending).map(([employeeId, employeePendingNovelties]) => {
+                const employee = employees.find(emp => emp.id === employeeId);
+                
+                return (
+                  <div key={employeeId} className="bg-white border border-yellow-300 rounded-lg p-4">
+                    {/* Nombre del empleado */}
+                    <div className="flex items-center space-x-2 mb-3">
+                      <User className="h-5 w-5 text-blue-600" />
+                      <span className="font-semibold text-gray-900 text-lg">{employee?.name}</span>
                     </div>
-                    <button
-                      onClick={() => handleRemovePendingNovelty(pending.id)}
-                      className="text-red-600 hover:text-red-800 p-1"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                    
+                    {/* Línea separadora */}
+                    <hr className="border-gray-300 mb-3" />
+                    
+                    {/* Lista de novedades del empleado */}
+                    <div className="space-y-2">
+                      {employeePendingNovelties.map((pending) => {
+                        const Icon = pending.categoryIcon;
+                        
+                        return (
+                          <div key={pending.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-center space-x-3">
+                              <div className={`p-2 rounded-full bg-${pending.categoryColor}-100`}>
+                                <Icon className={`h-4 w-4 text-${pending.categoryColor}-600`} />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{pending.typeLabel}</p>
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-medium">Valor:</span> {getPendingDisplayValue(pending)}
+                                  {pending.description && (
+                                    <span className="ml-2">• {pending.description}</span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleRemovePendingNovelty(pending.id)}
+                              className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
+                              title="Eliminar novedad pendiente"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="space-y-1 text-sm">
-                    <p><span className="font-medium">Tipo:</span> {pending.typeLabel}</p>
-                    <p><span className="font-medium">Valor:</span> {getPendingDisplayValue(pending)}</p>
-                    {pending.description && (
-                      <p><span className="font-medium">Descripción:</span> {pending.description}</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </div>
       )}
