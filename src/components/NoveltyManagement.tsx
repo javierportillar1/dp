@@ -177,17 +177,31 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
   };
 
   const handleEditEmployee = (employeeId: string, categoryId: string) => {
-    setEditingEmployees(prev => new Set([...prev, employeeId]));
-    setSelectedCategory(categoryId);
-    const category = noveltyCategories.find(c => c.id === categoryId);
-    setBulkNoveltyData(prev => ({
-      ...prev,
-      [employeeId]: {
-        type: (category?.types[0].value || 'ABSENCE') as Novelty['type'],
-        value: '1',
-        description: ''
-      }
-    }));
+    // Si el empleado ya está siendo editado, solo cambiar la categoría
+    if (editingEmployees.has(employeeId)) {
+      setSelectedCategory(categoryId);
+      const category = noveltyCategories.find(c => c.id === categoryId);
+      setBulkNoveltyData(prev => ({
+        ...prev,
+        [employeeId]: {
+          ...prev[employeeId],
+          type: (category?.types[0].value || 'ABSENCE') as Novelty['type'],
+        }
+      }));
+    } else {
+      // Si no está siendo editado, iniciar la edición
+      setEditingEmployees(prev => new Set([...prev, employeeId]));
+      setSelectedCategory(categoryId);
+      const category = noveltyCategories.find(c => c.id === categoryId);
+      setBulkNoveltyData(prev => ({
+        ...prev,
+        [employeeId]: {
+          type: (category?.types[0].value || 'ABSENCE') as Novelty['type'],
+          value: '1',
+          description: ''
+        }
+      }));
+    }
   };
 
   const handleCancelEdit = (employeeId: string) => {
@@ -233,9 +247,27 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
 
     if (newNovelties.length > 0) {
       setNovelties([...novelties, ...newNovelties]);
-      setBulkNoveltyData({});
-      setEditingEmployees(new Set());
-      setSelectedCategory('');
+      // Limpiar solo los datos guardados, pero mantener el estado de edición
+      const savedEmployeeIds = Object.keys(bulkNoveltyData).filter(employeeId => {
+        const data = bulkNoveltyData[employeeId];
+        return data.type && data.value && parseFloat(data.value) > 0;
+      });
+      
+      setBulkNoveltyData(prev => {
+        const newData = { ...prev };
+        savedEmployeeIds.forEach(employeeId => {
+          delete newData[employeeId];
+        });
+        return newData;
+      });
+      
+      setEditingEmployees(prev => {
+        const newSet = new Set(prev);
+        savedEmployeeIds.forEach(employeeId => {
+          newSet.delete(employeeId);
+        });
+        return newSet;
+      });
     }
   };
 
@@ -371,15 +403,30 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                         <X className="h-4 w-4" />
                       </button>
                     </div>
-                  ) : (
+                  ) : null}
+                  
+                  {/* Siempre mostrar los botones de categorías */}
+                  <div className="flex items-center space-x-2">
+                    {editingEmployees.has(employee.id) && (
+                      <div className="text-xs text-blue-600 font-medium mr-2">
+                        Editando...
+                      </div>
+                    )}
                     <div className="flex items-center space-x-2">
                       {noveltyCategories.map((category) => {
                         const Icon = category.icon;
+                        const colorClasses = {
+                          red: 'bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800',
+                          blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800',
+                          green: 'bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800',
+                          purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800'
+                        };
+                        
                         return (
                           <button
                             key={category.id}
                             onClick={() => handleEditEmployee(employee.id, category.id)}
-                            className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 hover:shadow-md bg-${category.color}-100 text-${category.color}-700 hover:bg-${category.color}-200 hover:text-${category.color}-800`}
+                            className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 hover:shadow-md ${colorClasses[category.color as keyof typeof colorClasses]}`}
                             title={category.name}
                           >
                             <Icon className="h-4 w-4" />
@@ -388,7 +435,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                         );
                       })}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             ))}
