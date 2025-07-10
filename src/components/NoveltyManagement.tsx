@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, User, AlertCircle, Edit, Save, X, Gift, Fuel, Clock } from 'lucide-react';
+import { Plus, Calendar, User, AlertTriangle, Heart, Plane, Gift, Clock, DollarSign, Save, X, Trash2 } from 'lucide-react';
 import { Employee, Novelty } from '../types';
 import { formatMonthYear } from '../utils/dateUtils';
 
@@ -13,8 +13,7 @@ interface NoveltyManagementProps {
 interface BulkNoveltyData {
   [employeeId: string]: {
     type: Novelty['type'];
-    discountDays: string;
-    bonusAmount: string;
+    value: string;
     description: string;
   };
 }
@@ -29,25 +28,61 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [bulkNoveltyData, setBulkNoveltyData] = useState<BulkNoveltyData>({});
   const [editingEmployees, setEditingEmployees] = useState<Set<string>>(new Set());
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   
   const [formData, setFormData] = useState({
     employeeId: '',
     type: 'ABSENCE' as Novelty['type'],
     date: '',
     description: '',
-    discountDays: '1',
-    bonusAmount: '0',
+    value: '1',
   });
 
-  const noveltyTypes = [
-    { value: 'ABSENCE', label: 'Ausencia', icon: AlertCircle, color: 'red', isDeduction: true },
-    { value: 'LATE', label: 'Llegada tarde', icon: Clock, color: 'yellow', isDeduction: true },
-    { value: 'EARLY_LEAVE', label: 'Salida temprana', icon: Clock, color: 'orange', isDeduction: true },
-    { value: 'MEDICAL_LEAVE', label: 'Incapacidad médica', icon: AlertCircle, color: 'blue', isDeduction: true },
-    { value: 'VACATION', label: 'Vacaciones', icon: Calendar, color: 'green', isDeduction: true },
-    { value: 'BONUS', label: 'Bonificación', icon: Gift, color: 'purple', isDeduction: false },
-    { value: 'GAS_ALLOWANCE', label: 'Auxilio de gasolina', icon: Fuel, color: 'indigo', isDeduction: false },
-    { value: 'OVERTIME', label: 'Horas extra', icon: Clock, color: 'emerald', isDeduction: false },
+  const noveltyCategories = [
+    {
+      id: 'disciplinary',
+      name: 'Disciplinarias',
+      icon: AlertTriangle,
+      color: 'red',
+      types: [
+        { value: 'ABSENCE', label: 'Ausencia', unitType: 'DAYS' as const },
+        { value: 'LATE', label: 'Llegada tarde', unitType: 'HOURS' as const },
+        { value: 'EARLY_LEAVE', label: 'Salida temprana', unitType: 'HOURS' as const },
+      ]
+    },
+    {
+      id: 'health',
+      name: 'Salud',
+      icon: Heart,
+      color: 'blue',
+      types: [
+        { value: 'MEDICAL_LEAVE', label: 'Incapacidad médica', unitType: 'DAYS' as const },
+      ]
+    },
+    {
+      id: 'vacation',
+      name: 'Vacaciones',
+      icon: Plane,
+      color: 'green',
+      types: [
+        { value: 'VACATION', label: 'Vacaciones', unitType: 'DAYS' as const },
+      ]
+    },
+    {
+      id: 'bonuses',
+      name: 'Bonificaciones',
+      icon: Gift,
+      color: 'purple',
+      types: [
+        { value: 'FIXED_COMPENSATION', label: 'Compensatorios fijos', unitType: 'MONEY' as const },
+        { value: 'SALES_BONUS', label: 'Bonificación en venta', unitType: 'MONEY' as const },
+        { value: 'FIXED_OVERTIME', label: 'Horas extra fijas', unitType: 'HOURS' as const },
+        { value: 'UNEXPECTED_OVERTIME', label: 'Horas extra NE', unitType: 'HOURS' as const },
+        { value: 'NIGHT_SURCHARGE', label: 'Recargos nocturnos', unitType: 'HOURS' as const },
+        { value: 'SUNDAY_WORK', label: 'Festivos', unitType: 'DAYS' as const },
+        { value: 'GAS_ALLOWANCE', label: 'Auxilio de gasolina', unitType: 'MONEY' as const },
+      ]
+    }
   ];
 
   // Get employees with and without novelties for selected month
@@ -63,14 +98,41 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     .filter(emp => employeesWithNovelties.includes(emp.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const getNoveltyTypeInfo = (type: Novelty['type']) => {
+    for (const category of noveltyCategories) {
+      const noveltyType = category.types.find(t => t.value === type);
+      if (noveltyType) {
+        return { 
+          ...noveltyType, 
+          categoryColor: category.color, 
+          categoryIcon: category.icon 
+        };
+      }
+    }
+    return { 
+      ...noveltyCategories[0].types[0], 
+      categoryColor: noveltyCategories[0].color, 
+      categoryIcon: noveltyCategories[0].icon 
+    };
+  };
+
+  const getUnitLabel = (unitType: 'DAYS' | 'MONEY' | 'HOURS') => {
+    switch (unitType) {
+      case 'DAYS': return 'días';
+      case 'MONEY': return 'pesos';
+      case 'HOURS': return 'horas';
+      default: return '';
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     const employee = employees.find(emp => emp.id === formData.employeeId);
     if (!employee) return;
 
-    const noveltyType = noveltyTypes.find(t => t.value === formData.type);
-    const isDeduction = noveltyType?.isDeduction || false;
+    const typeInfo = getNoveltyTypeInfo(formData.type);
+    const value = parseFloat(formData.value);
 
     const newNovelty: Novelty = {
       id: crypto.randomUUID(),
@@ -79,35 +141,28 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
       type: formData.type,
       date: formData.date,
       description: formData.description,
-      discountDays: isDeduction ? parseFloat(formData.discountDays) : 0,
-      bonusAmount: !isDeduction ? parseFloat(formData.bonusAmount) : 0,
+      discountDays: typeInfo.unitType === 'DAYS' && ['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(formData.type) ? value : 0,
+      bonusAmount: typeInfo.unitType === 'MONEY' ? value : 0,
+      hours: typeInfo.unitType === 'HOURS' ? value : undefined,
+      days: typeInfo.unitType === 'DAYS' && !['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(formData.type) ? value : undefined,
+      unitType: typeInfo.unitType,
     };
 
     setNovelties([...novelties, newNovelty]);
-
-    // Note: We no longer update employee's total worked days here
-    // The monthly calculation will handle absences per month
 
     setFormData({
       employeeId: '',
       type: 'ABSENCE',
       date: '',
       description: '',
-      discountDays: '1',
-      bonusAmount: '0',
+      value: '1',
     });
     setIsFormOpen(false);
   };
 
   const handleDelete = (noveltyId: string) => {
-    const novelty = novelties.find(n => n.id === noveltyId);
-    if (!novelty) return;
-
     if (confirm('¿Estás seguro de que quieres eliminar esta novedad?')) {
       setNovelties(novelties.filter(n => n.id !== noveltyId));
-      
-      // Note: We no longer update employee's total worked days here
-      // The monthly calculation will handle absences per month
     }
   };
 
@@ -121,14 +176,15 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     }));
   };
 
-  const handleEditEmployee = (employeeId: string) => {
+  const handleEditEmployee = (employeeId: string, categoryId: string) => {
     setEditingEmployees(prev => new Set([...prev, employeeId]));
+    setSelectedCategory(categoryId);
+    const category = noveltyCategories.find(c => c.id === categoryId);
     setBulkNoveltyData(prev => ({
       ...prev,
       [employeeId]: {
-        type: 'ABSENCE',
-        discountDays: '1',
-        bonusAmount: '0',
+        type: (category?.types[0].value || 'ABSENCE') as Novelty['type'],
+        value: '1',
         description: ''
       }
     }));
@@ -145,22 +201,19 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
       delete newData[employeeId];
       return newData;
     });
+    setSelectedCategory('');
   };
 
   const handleSaveBulkNovelties = () => {
     const newNovelties: Novelty[] = [];
-    const employeeUpdates: { [id: string]: number } = {};
     
     Object.entries(bulkNoveltyData).forEach(([employeeId, data]) => {
       const employee = employees.find(emp => emp.id === employeeId);
-      if (employee && data.type) {
-        const noveltyType = noveltyTypes.find(t => t.value === data.type);
-        const isDeduction = noveltyType?.isDeduction || false;
+      if (employee && data.type && data.value) {
+        const typeInfo = getNoveltyTypeInfo(data.type);
+        const value = parseFloat(data.value);
         
-        const discountDays = isDeduction ? parseFloat(data.discountDays) || 0 : 0;
-        const bonusAmount = !isDeduction ? parseFloat(data.bonusAmount) || 0 : 0;
-        
-        if (discountDays > 0 || bonusAmount > 0) {
+        if (value > 0) {
           newNovelties.push({
             id: crypto.randomUUID(),
             employeeId,
@@ -168,31 +221,45 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
             type: data.type,
             date: new Date().toISOString().slice(0, 10),
             description: data.description || '',
-            discountDays,
-            bonusAmount,
+            discountDays: typeInfo.unitType === 'DAYS' && ['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(data.type) ? value : 0,
+            bonusAmount: typeInfo.unitType === 'MONEY' ? value : 0,
+            hours: typeInfo.unitType === 'HOURS' ? value : undefined,
+            days: typeInfo.unitType === 'DAYS' && !['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(data.type) ? value : undefined,
+            unitType: typeInfo.unitType,
           });
-
-          // Track employee updates for deductions
-          if (isDeduction && discountDays > 0) {
-            employeeUpdates[employeeId] = (employeeUpdates[employeeId] || 0) + discountDays;
-          }
         }
       }
     });
 
     if (newNovelties.length > 0) {
       setNovelties([...novelties, ...newNovelties]);
-      
-      // Note: We no longer update employee's total worked days here
-      // The monthly calculation will handle absences per month
-      
       setBulkNoveltyData({});
       setEditingEmployees(new Set());
+      setSelectedCategory('');
     }
   };
 
-  const getNoveltyTypeInfo = (type: Novelty['type']) => {
-    return noveltyTypes.find(t => t.value === type) || noveltyTypes[0];
+  const getNoveltyDisplayValue = (novelty: Novelty) => {
+    switch (novelty.unitType) {
+      case 'DAYS':
+        if (['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(novelty.type)) {
+          return `${novelty.discountDays} días`;
+        }
+        return `${novelty.days} días`;
+      case 'MONEY':
+        return `$${novelty.bonusAmount.toLocaleString()}`;
+      case 'HOURS':
+        return `${novelty.hours} horas`;
+      default:
+        return '-';
+    }
+  };
+
+  // Get available types for the selected category
+  const getAvailableTypes = () => {
+    if (!selectedCategory) return [];
+    const category = noveltyCategories.find(c => c.id === selectedCategory);
+    return category?.types || [];
   };
 
   return (
@@ -243,7 +310,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
           
           <div className="divide-y divide-gray-200">
             {employeesWithoutNovelties.map((employee) => (
-              <div key={employee.id} className="px-6 py-4 bg-blue-25 hover:bg-blue-50 transition-colors">
+              <div key={employee.id} className="px-6 py-4 hover:bg-blue-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <User className="h-5 w-5 text-blue-600" />
@@ -256,35 +323,38 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                   {editingEmployees.has(employee.id) ? (
                     <div className="flex items-center space-x-3">
                       <select
-                        value={bulkNoveltyData[employee.id]?.type || 'ABSENCE'}
+                        value={bulkNoveltyData[employee.id]?.type || ''}
                         onChange={(e) => handleBulkNoveltyChange(employee.id, 'type', e.target.value)}
                         className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        {noveltyTypes.map((type) => (
+                        <option value="">Seleccionar tipo</option>
+                        {getAvailableTypes().map((type) => (
                           <option key={type.value} value={type.value}>
                             {type.label}
                           </option>
                         ))}
                       </select>
                       
-                      {getNoveltyTypeInfo(bulkNoveltyData[employee.id]?.type || 'ABSENCE').isDeduction ? (
+                      <div className="flex items-center space-x-1">
                         <input
                           type="number"
                           step="0.5"
-                          placeholder="Días"
-                          value={bulkNoveltyData[employee.id]?.discountDays || ''}
-                          onChange={(e) => handleBulkNoveltyChange(employee.id, 'discountDays', e.target.value)}
+                          placeholder="Valor"
+                          value={bulkNoveltyData[employee.id]?.value || ''}
+                          onChange={(e) => handleBulkNoveltyChange(employee.id, 'value', e.target.value)}
                           className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
-                      ) : (
-                        <input
-                          type="number"
-                          placeholder="Monto"
-                          value={bulkNoveltyData[employee.id]?.bonusAmount || ''}
-                          onChange={(e) => handleBulkNoveltyChange(employee.id, 'bonusAmount', e.target.value)}
-                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      )}
+                        <span className="text-xs text-gray-500">
+                          {(() => {
+                            const selectedType = bulkNoveltyData[employee.id]?.type;
+                            if (selectedType) {
+                              const typeInfo = getNoveltyTypeInfo(selectedType);
+                              return getUnitLabel(typeInfo.unitType);
+                            }
+                            return '';
+                          })()}
+                        </span>
+                      </div>
                       
                       <input
                         type="text"
@@ -302,13 +372,22 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => handleEditEmployee(employee.id)}
-                      className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span>Agregar Novedad</span>
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      {noveltyCategories.map((category) => {
+                        const Icon = category.icon;
+                        return (
+                          <button
+                            key={category.id}
+                            onClick={() => handleEditEmployee(employee.id, category.id)}
+                            className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 hover:shadow-md bg-${category.color}-100 text-${category.color}-700 hover:bg-${category.color}-200 hover:text-${category.color}-800`}
+                            title={category.name}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span>{category.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
@@ -356,9 +435,11 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                   .sort((a, b) => a.employeeName.localeCompare(b.employeeName))
                   .map((novelty) => {
                     const typeInfo = getNoveltyTypeInfo(novelty.type);
-                    const Icon = typeInfo.icon;
+                    const Icon = typeInfo.categoryIcon;
+                    const isDeduction = ['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(novelty.type);
+                    
                     return (
-                      <tr key={novelty.id} className="bg-green-25 hover:bg-green-50">
+                      <tr key={novelty.id} className="hover:bg-green-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <User className="h-4 w-4 text-gray-400 mr-2" />
@@ -368,7 +449,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-${typeInfo.color}-100 text-${typeInfo.color}-800`}>
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-${typeInfo.categoryColor}-100 text-${typeInfo.categoryColor}-800`}>
                             <Icon className="h-3 w-3 mr-1" />
                             {typeInfo.label}
                           </span>
@@ -382,15 +463,9 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {typeInfo.isDeduction ? (
-                            <span className="text-sm text-red-600 font-medium">
-                              -{novelty.discountDays} días
-                            </span>
-                          ) : (
-                            <span className="text-sm text-green-600 font-medium">
-                              +${novelty.bonusAmount.toLocaleString()}
-                            </span>
-                          )}
+                          <span className={`text-sm font-medium ${isDeduction ? 'text-red-600' : 'text-green-600'}`}>
+                            {isDeduction ? '-' : '+'}{getNoveltyDisplayValue(novelty)}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-sm text-gray-900">
@@ -400,9 +475,9 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
                             onClick={() => handleDelete(novelty.id)}
-                            className="text-red-600 hover:text-red-800 text-sm"
+                            className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
                           >
-                            Eliminar
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </td>
                       </tr>
@@ -449,10 +524,14 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                   onChange={(e) => setFormData({ ...formData, type: e.target.value as Novelty['type'] })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 >
-                  {noveltyTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
+                  {noveltyCategories.map((category) => (
+                    <optgroup key={category.id} label={category.name}>
+                      {category.types.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
@@ -470,34 +549,22 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                 />
               </div>
               
-              {getNoveltyTypeInfo(formData.type).isDeduction ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Días a descontar
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={formData.discountDays}
-                    onChange={(e) => setFormData({ ...formData, discountDays: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monto del bono
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.bonusAmount}
-                    onChange={(e) => setFormData({ ...formData, bonusAmount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Valor ({(() => {
+                    const typeInfo = getNoveltyTypeInfo(formData.type);
+                    return getUnitLabel(typeInfo.unitType);
+                  })()})
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={formData.value}
+                  onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  required
+                />
+              </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -534,7 +601,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
 
       {employeesWithoutNovelties.length === 0 && employeesWithNoveltiesData.length === 0 && (
         <div className="text-center py-12 bg-white rounded-lg shadow-md border border-gray-200">
-          <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
+          <AlertTriangle className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No hay empleados registrados</h3>
           <p className="mt-1 text-sm text-gray-500">
             Primero registra empleados para poder gestionar novedades.

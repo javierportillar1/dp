@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calculator, Download, AlertCircle, TrendingUp, CreditCard } from 'lucide-react';
 import { Employee, Novelty, PayrollCalculation, AdvancePayment, DeductionRates, MINIMUM_SALARY_COLOMBIA, TRANSPORT_ALLOWANCE } from '../types';
-import { getDaysInMonth, formatMonthYear, parseMonthString } from '../utils/dateUtils';
+import { getDaysInMonth, formatMonthYear, parseMonthString, isEmployeeActiveInMonth } from '../utils/dateUtils';
 
 interface PayrollCalculatorProps {
   employees: Employee[];
@@ -30,7 +30,12 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
     const { year, month } = parseMonthString(selectedMonth);
     const daysInMonth = getDaysInMonth(year, month);
     
-    const calculations: PayrollCalculation[] = employees.map(employee => {
+    // Filter employees who were active (hired before or during) the selected month
+    const activeEmployees = employees.filter(employee => 
+      isEmployeeActiveInMonth(employee, selectedMonth)
+    );
+    
+    const calculations: PayrollCalculation[] = activeEmployees.map(employee => {
       const employeeNovelties = novelties.filter(n => n.employeeId === employee.id);
       const employeeAdvances = advances.filter(a => a.employeeId === employee.id && a.month === selectedMonth);
       
