@@ -360,6 +360,9 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                     Aux. Transporte
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Adiciones
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Deducciones
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -397,36 +400,39 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                       ${calc.transportAllowance.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="space-y-1">
-                        {(calc.bonusCalculations?.total || 0) > 0 && (
-                          <div className="space-y-1">
-                            <div className="font-medium text-green-700 border-b pb-1">Adiciones:</div>
-                            {(calc.bonusCalculations?.fixedCompensation || 0) > 0 && (
-                              <div className="text-green-600 text-xs">Compensatorios: ${(calc.bonusCalculations?.fixedCompensation || 0).toLocaleString()}</div>
-                            )}
-                            {(calc.bonusCalculations?.salesBonus || 0) > 0 && (
-                              <div className="text-green-600 text-xs">Bonif. venta: ${(calc.bonusCalculations?.salesBonus || 0).toLocaleString()}</div>
-                            )}
-                            {(calc.bonusCalculations?.fixedOvertime || 0) > 0 && (
-                              <div className="text-green-600 text-xs">H. extra fijas: ${(calc.bonusCalculations?.fixedOvertime || 0).toLocaleString()}</div>
-                            )}
-                            {(calc.bonusCalculations?.unexpectedOvertime || 0) > 0 && (
-                              <div className="text-green-600 text-xs">H. extra NE: ${(calc.bonusCalculations?.unexpectedOvertime || 0).toLocaleString()}</div>
-                            )}
-                            {(calc.bonusCalculations?.nightSurcharge || 0) > 0 && (
-                              <div className="text-green-600 text-xs">Recargos noc.: ${(calc.bonusCalculations?.nightSurcharge || 0).toLocaleString()}</div>
-                            )}
-                            {(calc.bonusCalculations?.sundayWork || 0) > 0 && (
-                              <div className="text-green-600 text-xs">Festivos: ${(calc.bonusCalculations?.sundayWork || 0).toLocaleString()}</div>
-                            )}
-                            {(calc.bonusCalculations?.gasAllowance || 0) > 0 && (
-                              <div className="text-green-600 text-xs">Aux. gasolina: ${(calc.bonusCalculations?.gasAllowance || 0).toLocaleString()}</div>
-                            )}
-                            <div className="font-medium text-green-600 border-t pt-1">
-                              Total: ${(calc.bonusCalculations?.total || 0).toLocaleString()}
-                            </div>
+                      {(calc.bonusCalculations?.total || 0) > 0 ? (
+                        <div className="space-y-1">
+                          {(calc.bonusCalculations?.fixedCompensation || 0) > 0 && (
+                            <div className="text-green-600 text-xs">Compensatorios: ${(calc.bonusCalculations?.fixedCompensation || 0).toLocaleString()}</div>
+                          )}
+                          {(calc.bonusCalculations?.salesBonus || 0) > 0 && (
+                            <div className="text-green-600 text-xs">Bonif. venta: ${(calc.bonusCalculations?.salesBonus || 0).toLocaleString()}</div>
+                          )}
+                          {(calc.bonusCalculations?.fixedOvertime || 0) > 0 && (
+                            <div className="text-green-600 text-xs">H. extra fijas: ${(calc.bonusCalculations?.fixedOvertime || 0).toLocaleString()}</div>
+                          )}
+                          {(calc.bonusCalculations?.unexpectedOvertime || 0) > 0 && (
+                            <div className="text-green-600 text-xs">H. extra NE: ${(calc.bonusCalculations?.unexpectedOvertime || 0).toLocaleString()}</div>
+                          )}
+                          {(calc.bonusCalculations?.nightSurcharge || 0) > 0 && (
+                            <div className="text-green-600 text-xs">Recargos noc.: ${(calc.bonusCalculations?.nightSurcharge || 0).toLocaleString()}</div>
+                          )}
+                          {(calc.bonusCalculations?.sundayWork || 0) > 0 && (
+                            <div className="text-green-600 text-xs">Festivos: ${(calc.bonusCalculations?.sundayWork || 0).toLocaleString()}</div>
+                          )}
+                          {(calc.bonusCalculations?.gasAllowance || 0) > 0 && (
+                            <div className="text-green-600 text-xs">Aux. gasolina: ${(calc.bonusCalculations?.gasAllowance || 0).toLocaleString()}</div>
+                          )}
+                          <div className="font-medium text-green-600 border-t pt-1">
+                            Total: ${(calc.bonusCalculations?.total || 0).toLocaleString()}
                           </div>
-                        )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="space-y-1">
                         <div>Salud: ${calc.deductions.health.toLocaleString()}</div>
                         <div>Pensión: ${calc.deductions.pension.toLocaleString()}</div>
                         {calc.deductions.solidarity > 0 && (
