@@ -70,7 +70,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       const totalAdvances = employeeAdvances.reduce((sum, advance) => sum + advance.amount, 0);
       
       const totalDeductions = healthDeduction + pensionDeduction + solidarityDeduction + totalAdvances;
-      const netSalary = grossSalary + transportAllowance + bonuses - totalDeductions;
+      const netSalary = grossSalary + transportAllowance + bonusCalculations.total - totalDeductions;
       
       return {
         employee,
@@ -80,7 +80,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
         discountedDays: monthlyDiscountedDays,
         transportAllowance,
         grossSalary,
-        bonuses,
+        bonuses: bonusCalculations.total,
         deductions: {
           health: healthDeduction,
           pension: pensionDeduction,
@@ -88,7 +88,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
           advance: totalAdvances,
           total: totalDeductions,
         },
-        netSalary,
+        netSalary: netSalary,
         novelties: monthlyNovelties,
         bonusCalculations,
       };
