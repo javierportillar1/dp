@@ -57,7 +57,8 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       ) ? (deductionRates.transportAllowance * workedDaysThisMonth) / 30 : 0;
       
       // Calculate bonuses from novelties of this month
-      const bonuses = monthlyNovelties.reduce((sum, n) => sum + n.bonusAmount, 0);
+      const bonusCalculations = calculateBonuses(monthlyNovelties, deductionRates);
+      const bonuses = bonusCalculations.total;
       
       // Calculate deductions using configurable rates
       const healthDeduction = grossSalary * (deductionRates.health / 100);
@@ -89,11 +90,66 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
         },
         netSalary,
         novelties: monthlyNovelties,
+        bonusCalculations,
       };
     });
     
     setPayrollCalculations(calculations);
     setIsCalculating(false);
+  };
+
+  const calculateBonuses = (novelties: Novelty[], rates: DeductionRates) => {
+    const calculations = {
+      fixedCompensation: 0,
+      salesBonus: 0,
+      fixedOvertime: 0,
+      unexpectedOvertime: 0,
+      nightSurcharge: 0,
+      sundayWork: 0,
+      gasAllowance: 0,
+      total: 0
+    };
+
+    novelties.forEach(novelty => {
+      switch (novelty.type) {
+        case 'FIXED_COMPENSATION':
+          calculations.fixedCompensation += novelty.bonusAmount;
+          break;
+        case 'SALES_BONUS':
+          calculations.salesBonus += novelty.bonusAmount;
+          break;
+        case 'FIXED_OVERTIME':
+          // Horas extra fijas: horas × hora ordinaria
+          const fixedOvertimeAmount = (novelty.hours || 0) * rates.ordinaryHour;
+          calculations.fixedOvertime += fixedOvertimeAmount;
+          break;
+        case 'UNEXPECTED_OVERTIME':
+          // Horas extra NE: horas × horas extra
+          const unexpectedOvertimeAmount = (novelty.hours || 0) * rates.overtime;
+          calculations.unexpectedOvertime += unexpectedOvertimeAmount;
+          break;
+        case 'NIGHT_SURCHARGE':
+          // Recargos nocturnos: horas × recargos nocturnos
+          const nightSurchargeAmount = (novelty.hours || 0) * rates.nightSurcharge;
+          calculations.nightSurcharge += nightSurchargeAmount;
+          break;
+        case 'SUNDAY_WORK':
+          // Festivos: días × dominical 1
+          const sundayWorkAmount = (novelty.days || 0) * rates.sunday1;
+          calculations.sundayWork += sundayWorkAmount;
+          break;
+        case 'GAS_ALLOWANCE':
+          calculations.gasAllowance += novelty.bonusAmount;
+          break;
+      }
+    });
+
+    calculations.total = calculations.fixedCompensation + calculations.salesBonus + 
+                       calculations.fixedOvertime + calculations.unexpectedOvertime + 
+                       calculations.nightSurcharge + calculations.sundayWork + 
+                       calculations.gasAllowance;
+
+    return calculations;
   };
 
   const exportToTxt = () => {
@@ -122,8 +178,30 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       txtContent += `   Días Descontados: ${calc.discountedDays}\n`;
       txtContent += `   Salario Bruto: $${calc.grossSalary.toLocaleString()}\n`;
       txtContent += `   Auxilio Transporte: $${calc.transportAllowance.toLocaleString()}\n`;
-      if (calc.bonuses > 0) {
-        txtContent += `   Bonificaciones: $${calc.bonuses.toLocaleString()}\n`;
+      if (calc.bonusCalculations.total > 0) {
+        txtContent += `   Adiciones:\n`;
+        if (calc.bonusCalculations.fixedCompensation > 0) {
+          txtContent += `     - Compensatorios fijos: $${calc.bonusCalculations.fixedCompensation.toLocaleString()}\n`;
+        }
+        if (calc.bonusCalculations.salesBonus > 0) {
+          txtContent += `     - Bonificación en venta: $${calc.bonusCalculations.salesBonus.toLocaleString()}\n`;
+        }
+        if (calc.bonusCalculations.fixedOvertime > 0) {
+          txtContent += `     - Horas extra fijas: $${calc.bonusCalculations.fixedOvertime.toLocaleString()}\n`;
+        }
+        if (calc.bonusCalculations.unexpectedOvertime > 0) {
+          txtContent += `     - Horas extra NE: $${calc.bonusCalculations.unexpectedOvertime.toLocaleString()}\n`;
+        }
+        if (calc.bonusCalculations.nightSurcharge > 0) {
+          txtContent += `     - Recargos nocturnos: $${calc.bonusCalculations.nightSurcharge.toLocaleString()}\n`;
+        }
+        if (calc.bonusCalculations.sundayWork > 0) {
+          txtContent += `     - Festivos: $${calc.bonusCalculations.sundayWork.toLocaleString()}\n`;
+        }
+        if (calc.bonusCalculations.gasAllowance > 0) {
+          txtContent += `     - Auxilio de gasolina: $${calc.bonusCalculations.gasAllowance.toLocaleString()}\n`;
+        }
+        txtContent += `     - Total Adiciones: $${calc.bonusCalculations.total.toLocaleString()}\n`;
       }
       txtContent += `   Deducciones:\n`;
       txtContent += `     - Salud (${deductionRates.health}%): $${calc.deductions.health.toLocaleString()}\n`;
@@ -320,8 +398,34 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="space-y-1">
-                        {calc.bonuses > 0 && (
-                          <div className="text-green-600">Bonos: ${calc.bonuses.toLocaleString()}</div>
+                        {calc.bonusCalculations.total > 0 && (
+                          <div className="space-y-1">
+                            <div className="font-medium text-green-700 border-b pb-1">Adiciones:</div>
+                            {calc.bonusCalculations.fixedCompensation > 0 && (
+                              <div className="text-green-600 text-xs">Compensatorios: ${calc.bonusCalculations.fixedCompensation.toLocaleString()}</div>
+                            )}
+                            {calc.bonusCalculations.salesBonus > 0 && (
+                              <div className="text-green-600 text-xs">Bonif. venta: ${calc.bonusCalculations.salesBonus.toLocaleString()}</div>
+                            )}
+                            {calc.bonusCalculations.fixedOvertime > 0 && (
+                              <div className="text-green-600 text-xs">H. extra fijas: ${calc.bonusCalculations.fixedOvertime.toLocaleString()}</div>
+                            )}
+                            {calc.bonusCalculations.unexpectedOvertime > 0 && (
+                              <div className="text-green-600 text-xs">H. extra NE: ${calc.bonusCalculations.unexpectedOvertime.toLocaleString()}</div>
+                            )}
+                            {calc.bonusCalculations.nightSurcharge > 0 && (
+                              <div className="text-green-600 text-xs">Recargos noc.: ${calc.bonusCalculations.nightSurcharge.toLocaleString()}</div>
+                            )}
+                            {calc.bonusCalculations.sundayWork > 0 && (
+                              <div className="text-green-600 text-xs">Festivos: ${calc.bonusCalculations.sundayWork.toLocaleString()}</div>
+                            )}
+                            {calc.bonusCalculations.gasAllowance > 0 && (
+                              <div className="text-green-600 text-xs">Aux. gasolina: ${calc.bonusCalculations.gasAllowance.toLocaleString()}</div>
+                            )}
+                            <div className="font-medium text-green-600 border-t pt-1">
+                              Total: ${calc.bonusCalculations.total.toLocaleString()}
+                            </div>
+                          </div>
                         )}
                         <div>Salud: ${calc.deductions.health.toLocaleString()}</div>
                         <div>Pensión: ${calc.deductions.pension.toLocaleString()}</div>

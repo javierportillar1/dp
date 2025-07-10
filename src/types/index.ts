@@ -35,6 +35,16 @@ export interface PayrollCalculation {
   transportAllowance: number;
   grossSalary: number;
   bonuses: number;
+  bonusCalculations: {
+    fixedCompensation: number;
+    salesBonus: number;
+    fixedOvertime: number;
+    unexpectedOvertime: number;
+    nightSurcharge: number;
+    sundayWork: number;
+    gasAllowance: number;
+    total: number;
+  };
   deductions: {
     health: number;
     pension: number;

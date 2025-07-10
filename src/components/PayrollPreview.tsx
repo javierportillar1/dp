@@ -13,7 +13,7 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
   const totalDeductions = payrollCalculations.reduce((sum, calc) => sum + calc.deductions.total, 0);
   const totalTransportAllowance = payrollCalculations.reduce((sum, calc) => sum + calc.transportAllowance, 0);
   const totalAdvances = payrollCalculations.reduce((sum, calc) => sum + calc.deductions.advance, 0);
-  const totalBonuses = payrollCalculations.reduce((sum, calc) => sum + calc.bonuses, 0);
+  const totalBonuses = payrollCalculations.reduce((sum, calc) => sum + calc.bonusCalculations.total, 0);
 
   return (
     <div className="space-y-6">
@@ -120,10 +120,10 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
                     </div>
                   )}
                   
-                  {calc.bonuses > 0 && (
+                  {calc.bonusCalculations.total > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Bonificaciones</span>
-                      <span className="font-medium text-green-600">${calc.bonuses.toLocaleString()}</span>
+                      <span className="text-sm text-gray-600">Adiciones</span>
+                      <span className="font-medium text-green-600">${calc.bonusCalculations.total.toLocaleString()}</span>
                     </div>
                   )}
                   
@@ -173,6 +173,49 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
                             )}
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {calc.bonusCalculations.total > 0 && (
+                    <div className="border-t pt-3">
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">Detalle de Adiciones</h4>
+                      <div className="space-y-1">
+                        {calc.bonusCalculations.fixedCompensation > 0 && (
+                          <div className="text-xs text-green-600">
+                            Compensatorios fijos: ${calc.bonusCalculations.fixedCompensation.toLocaleString()}
+                          </div>
+                        )}
+                        {calc.bonusCalculations.salesBonus > 0 && (
+                          <div className="text-xs text-green-600">
+                            Bonificación en venta: ${calc.bonusCalculations.salesBonus.toLocaleString()}
+                          </div>
+                        )}
+                        {calc.bonusCalculations.fixedOvertime > 0 && (
+                          <div className="text-xs text-green-600">
+                            Horas extra fijas: ${calc.bonusCalculations.fixedOvertime.toLocaleString()}
+                          </div>
+                        )}
+                        {calc.bonusCalculations.unexpectedOvertime > 0 && (
+                          <div className="text-xs text-green-600">
+                            Horas extra NE: ${calc.bonusCalculations.unexpectedOvertime.toLocaleString()}
+                          </div>
+                        )}
+                        {calc.bonusCalculations.nightSurcharge > 0 && (
+                          <div className="text-xs text-green-600">
+                            Recargos nocturnos: ${calc.bonusCalculations.nightSurcharge.toLocaleString()}
+                          </div>
+                        )}
+                        {calc.bonusCalculations.sundayWork > 0 && (
+                          <div className="text-xs text-green-600">
+                            Festivos: ${calc.bonusCalculations.sundayWork.toLocaleString()}
+                          </div>
+                        )}
+                        {calc.bonusCalculations.gasAllowance > 0 && (
+                          <div className="text-xs text-green-600">
+                            Auxilio de gasolina: ${calc.bonusCalculations.gasAllowance.toLocaleString()}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
