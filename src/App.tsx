@@ -30,7 +30,7 @@ function useLocalStorage<T>(key: string, defaultValue: T) {
         }
         // For objects, merge with defaultValue to ensure all properties exist
         if (typeof defaultValue === 'object' && defaultValue !== null && !Array.isArray(defaultValue)) {
-          return { ...(defaultValue as any), ...(parsedValue as any) } as T;
+          return { ...(defaultValue as Record<string, unknown>), ...(parsedValue as Record<string, unknown>) } as T;
         }
         // For primitive values, return parsed value directly
         return parsedValue;

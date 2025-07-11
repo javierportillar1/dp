@@ -21,8 +21,10 @@ export const Navigation: React.FC<NavigationProps> = ({ activeSection, setActive
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-2">
-            <Calculator className="h-8 w-8 text-blue-600" />
-            <h1 className="text-xl font-bold text-gray-900">Sistema de Nómina</h1>
+            <div className="bg-blue-100 p-2 rounded-full">
+              <Calculator className="h-6 w-6 text-blue-600" />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900">Liquidación de Nómina Web Droguerías Popular</h1>
           </div>
           <div className="flex space-x-1">
             {sections.map((section) => {

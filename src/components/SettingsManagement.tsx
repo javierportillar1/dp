@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Percent, Save, RotateCcw, Clock, DollarSign } from 'lucide-react';
+import { Settings, Percent, Save, RotateCcw, Clock } from 'lucide-react';
 import { DeductionRates, DEFAULT_DEDUCTION_RATES } from '../types';
 
 interface SettingsManagementProps {
@@ -11,6 +11,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
   deductionRates, 
   setDeductionRates 
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     health: deductionRates.health.toString(),
     pension: deductionRates.pension.toString(),
@@ -46,6 +47,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
 
     setDeductionRates(newRates);
     setIsSaved(true);
+    setIsEditing(false);
     
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -66,6 +68,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
     });
     setDeductionRates(DEFAULT_DEDUCTION_RATES);
     setIsSaved(true);
+    setIsEditing(false);
     setTimeout(() => setIsSaved(false), 3000);
   };
 
@@ -73,9 +76,20 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Configuración del Sistema</h2>
-        <div className="flex items-center space-x-2 text-sm text-gray-500">
-          <Settings className="h-4 w-4" />
-          <span>Configuración de Parámetros</span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <Settings className="h-4 w-4" />
+            <span>Configuración de Parámetros</span>
+          </div>
+          {!isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+              <span>Editar Parámetros</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -101,6 +115,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.health}
                   onChange={(e) => setFormData({ ...formData, health: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-red-600 text-sm">%</span>
@@ -121,6 +136,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.pension}
                   onChange={(e) => setFormData({ ...formData, pension: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-blue-600 text-sm">%</span>
@@ -141,6 +157,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.solidarity}
                   onChange={(e) => setFormData({ ...formData, solidarity: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-purple-600 text-sm">%</span>
@@ -159,6 +176,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.transportAllowance}
                   onChange={(e) => setFormData({ ...formData, transportAllowance: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-green-600 text-sm">$</span>
@@ -187,6 +205,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.sunday1}
                   onChange={(e) => setFormData({ ...formData, sunday1: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-indigo-600 text-sm">$</span>
@@ -205,6 +224,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.sunday2}
                   onChange={(e) => setFormData({ ...formData, sunday2: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-indigo-600 text-sm">$</span>
@@ -223,6 +243,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.sunday3}
                   onChange={(e) => setFormData({ ...formData, sunday3: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-indigo-600 text-sm">$</span>
@@ -241,6 +262,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.overtime}
                   onChange={(e) => setFormData({ ...formData, overtime: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-orange-600 text-sm">$</span>
@@ -259,6 +281,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.nightSellers}
                   onChange={(e) => setFormData({ ...formData, nightSellers: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-slate-600 text-sm">$</span>
@@ -277,6 +300,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.nightSurcharge}
                   onChange={(e) => setFormData({ ...formData, nightSurcharge: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-gray-600 text-sm">$</span>
@@ -295,6 +319,7 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                   value={formData.ordinaryHour}
                   onChange={(e) => setFormData({ ...formData, ordinaryHour: e.target.value })}
                   className="w-full px-3 py-2 pr-8 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  disabled={!isEditing}
                   required
                 />
                 <span className="absolute right-3 top-2 text-emerald-600 text-sm">$</span>
@@ -317,14 +342,17 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
         </div>
 
         <div className="flex justify-between items-center pt-4">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-          >
-            <RotateCcw className="h-4 w-4" />
-            <span>Restaurar Valores por Defecto</span>
-          </button>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>Restaurar Valores por Defecto</span>
+            </button>
+          )}
+          {!isEditing && <div></div>}
 
           <div className="flex items-center space-x-3">
             {isSaved && (
@@ -332,13 +360,24 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({
                 ✓ Configuración guardada
               </span>
             )}
-            <button
-              type="submit"
-              className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Save className="h-4 w-4" />
-              <span>Guardar Cambios</span>
-            </button>
+            {isEditing && (
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Guardar Cambios</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </form>

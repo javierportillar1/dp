@@ -1,7 +1,6 @@
 import React from 'react';
 import { FileText, User, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 import { PayrollCalculation, AdvancePayment } from '../types';
-import { formatMonthYear } from '../utils/dateUtils';
 
 interface PayrollPreviewProps {
   payrollCalculations: PayrollCalculation[];
@@ -142,6 +141,48 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
                         <span className="text-red-600">-${calc.deductions.solidarity.toLocaleString()}</span>
                       </div>
                     )}
+                    {calc.deductions.absence > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Ausencias</span>
+                        <span className="text-red-600">-${calc.deductions.absence.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {calc.deductions.planCorporativo > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Plan corporativo</span>
+                        <span className="text-red-600">-${calc.deductions.planCorporativo.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {calc.deductions.recordar > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Recordar</span>
+                        <span className="text-red-600">-${calc.deductions.recordar.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {calc.deductions.inventariosCruces > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Inventarios y cruces</span>
+                        <span className="text-red-600">-${calc.deductions.inventariosCruces.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {calc.deductions.multas > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Multas</span>
+                        <span className="text-red-600">-${calc.deductions.multas.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {calc.deductions.fondoEmpleados > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Fondo de empleados</span>
+                        <span className="text-red-600">-${calc.deductions.fondoEmpleados.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {calc.deductions.carteraEmpleados > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Cartera empleados</span>
+                        <span className="text-red-600">-${calc.deductions.carteraEmpleados.toLocaleString()}</span>
+                      </div>
+                    )}
                     {calc.deductions.advance > 0 && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-600">Adelantos</span>
@@ -167,9 +208,52 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
                       <div className="space-y-1">
                         {calc.novelties.map((novelty) => (
                           <div key={novelty.id} className="text-xs text-gray-600">
-                            <span className="font-medium">{new Date(novelty.date).toLocaleDateString()}</span>: {novelty.type}
-                            {novelty.discountDays > 0 && (
-                              <span className="text-red-600 ml-1">(-{novelty.discountDays} días)</span>
+                            <span className="font-medium">{new Date(novelty.date).toLocaleDateString()}</span>: {(() => {
+                              const typeLabels: Record<string, string> = {
+                                'ABSENCE': 'Ausencia',
+                                'LATE': 'Llegada tarde',
+                                'EARLY_LEAVE': 'Salida temprana',
+                                'MEDICAL_LEAVE': 'Incapacidad médica',
+                                'VACATION': 'Vacaciones',
+                                'FIXED_COMPENSATION': 'Compensatorios fijos',
+                                'SALES_BONUS': 'Bonificación en venta',
+                                'FIXED_OVERTIME': 'Horas extra fijas',
+                                'UNEXPECTED_OVERTIME': 'Horas extra NE',
+                                'NIGHT_SURCHARGE': 'Recargos nocturnos',
+                                'SUNDAY_WORK': 'Festivos',
+                                'GAS_ALLOWANCE': 'Auxilio de gasolina'
+                                ,'PLAN_CORPORATIVO': 'Plan corporativo'
+                                ,'RECORDAR': 'Recordar'
+                                ,'INVENTARIOS_CRUCES': 'Inventarios y cruces'
+                                ,'MULTAS': 'Multas'
+                                ,'FONDO_EMPLEADOS': 'Fondo de empleados'
+                                ,'CARTERA_EMPLEADOS': 'Cartera empleados'
+                              };
+                              return typeLabels[novelty.type] || novelty.type;
+                            })()}
+                            {(novelty.discountDays > 0 || ['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type)) && (
+                              <span className="text-red-600 ml-1">
+                                {novelty.discountDays > 0 && `(-${novelty.discountDays} días)`}
+                              </span>
+                            )}
+                           {novelty.bonusAmount > 0 && !['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type) && (
+                              <span className={`ml-1 ${['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type) ? 'text-red-600' : 'text-green-600'}`}>
+                               (+$${novelty.bonusAmount.toLocaleString()})
+                             </span>
+                           )}
+                           {novelty.bonusAmount > 0 && ['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type) && (
+                             <span className="text-red-600 ml-1">
+                               (-$${novelty.bonusAmount.toLocaleString()})
+                              </span>
+                            )}
+                            {novelty.hours && novelty.hours > 0 && (
+                              <span className="text-blue-600 ml-1">({novelty.hours} horas)</span>
+                            )}
+                            {novelty.days && novelty.days > 0 && (
+                              <span className="text-purple-600 ml-1">({novelty.days} días)</span>
+                            )}
+                            {novelty.description && (
+                              <span className="text-gray-500 ml-1">- {novelty.description}</span>
                             )}
                           </div>
                         ))}

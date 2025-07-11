@@ -16,7 +16,25 @@ export interface Novelty {
   id: string;
   employeeId: string;
   employeeName: string;
-  type: 'ABSENCE' | 'LATE' | 'EARLY_LEAVE' | 'MEDICAL_LEAVE' | 'VACATION' | 'FIXED_COMPENSATION' | 'SALES_BONUS' | 'FIXED_OVERTIME' | 'UNEXPECTED_OVERTIME' | 'NIGHT_SURCHARGE' | 'SUNDAY_WORK' | 'GAS_ALLOWANCE';
+  type:
+    | 'ABSENCE'
+    | 'LATE'
+    | 'EARLY_LEAVE'
+    | 'MEDICAL_LEAVE'
+    | 'VACATION'
+    | 'FIXED_COMPENSATION'
+    | 'SALES_BONUS'
+    | 'FIXED_OVERTIME'
+    | 'UNEXPECTED_OVERTIME'
+    | 'NIGHT_SURCHARGE'
+    | 'SUNDAY_WORK'
+    | 'GAS_ALLOWANCE'
+    | 'PLAN_CORPORATIVO'
+    | 'RECORDAR'
+    | 'INVENTARIOS_CRUCES'
+    | 'MULTAS'
+    | 'FONDO_EMPLEADOS'
+    | 'CARTERA_EMPLEADOS';
   date: string;
   description: string;
   discountDays: number; // For deductions
@@ -49,7 +67,14 @@ export interface PayrollCalculation {
     health: number;
     pension: number;
     solidarity: number;
+    absence: number;
     advance: number;
+    planCorporativo: number;
+    recordar: number;
+    inventariosCruces: number;
+    multas: number;
+    fondoEmpleados: number;
+    carteraEmpleados: number;
     total: number;
   };
   netSalary: number;
@@ -75,6 +100,8 @@ export interface AdvancePayment {
   employeeId: string;
   employeeName: string;
   amount: number;
+  employeeFund?: number;
+  employeeLoan?: number;
   date: string;
   month: string;
   description: string;

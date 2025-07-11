@@ -1,4 +1,5 @@
 // Utility functions for date handling
+import { Employee } from '../types';
 export const getDaysInMonth = (year: number, month: number): number => {
   return new Date(year, month, 0).getDate();
 };
@@ -23,7 +24,7 @@ export const parseMonthString = (monthString: string): { year: number; month: nu
   };
 };
 
-export const isEmployeeActiveInMonth = (employee: any, monthString: string): boolean => {
+export const isEmployeeActiveInMonth = (employee: Employee, monthString: string): boolean => {
   if (!employee.createdDate) return true; // If no creation date, assume they were active
 
   const { year: selectedYear, month: selectedMonth } = parseMonthString(monthString);
