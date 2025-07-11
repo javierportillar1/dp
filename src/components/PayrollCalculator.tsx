@@ -437,16 +437,16 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
           </div>
           
           <div 
-            className="overflow-x-auto border border-gray-200 rounded-lg" 
+            className="table-container border border-gray-200 rounded-lg" 
             style={{ 
               fontSize: `${tableZoom}%`,
-              overflowX: 'auto',
+              overflowX: 'scroll',
               overflowY: 'visible',
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#CBD5E0 #F7FAFC'
+              scrollbarWidth: 'auto',
+              scrollbarColor: '#6b7280 #f1f5f9'
             }}
           >
-            <table className="min-w-max w-full border-collapse" style={{ fontSize: `${tableZoom / 100}em`, minWidth: '1800px' }}>
+            <table className="payroll-table w-full border-collapse" style={{ fontSize: `${tableZoom / 100}em` }}>
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
