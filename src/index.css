@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom scrollbar styles for better visibility */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 12px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 6px;
+  border: 2px solid #f1f5f9;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Force scrollbar to always be visible */
+.overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f1f5f9;
+  overflow-x: auto !important;
+}
+
+/* Ensure table maintains minimum width for horizontal scrolling */
+.payroll-table {
+  min-width: 1800px;
+}
