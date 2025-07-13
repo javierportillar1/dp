@@ -150,7 +150,7 @@ function App() {
             employees={employees}
             novelties={novelties}
             setNovelties={setNovelties}
-            setEmployees={setEmployees}
+
           />
         );
       case 'advances':

@@ -79,7 +79,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     },
     {
       id: 'bonuses',
-      name: 'Bonificaciones',
+      name: 'Otros pagos',
       icon: Gift,
       color: 'purple',
       types: [
@@ -364,41 +364,6 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     }
   };
 
-  const getNoveltyDisplayValue = (novelty: Novelty) => {
-    const calculateMoneyValue = () => {
-      if (novelty.unitType === 'MONEY') return novelty.bonusAmount;
-      if (novelty.unitType === 'HOURS' && novelty.hours) {
-        // Calculate money value based on hour type
-        switch (novelty.type) {
-          case 'FIXED_OVERTIME': return novelty.hours * 6200; // ordinaryHour rate
-          case 'UNEXPECTED_OVERTIME': return novelty.hours * 7800; // overtime rate
-          case 'NIGHT_SURCHARGE': return novelty.hours * 2200; // nightSurcharge rate
-          default: return novelty.hours * 6200;
-        }
-      }
-      if (novelty.unitType === 'DAYS' && novelty.days) {
-        switch (novelty.type) {
-          case 'SUNDAY_WORK': return novelty.days * 37200; // sunday1 rate
-          default: return novelty.days * 37200;
-        }
-      }
-      return 0;
-    };
-
-    switch (novelty.unitType) {
-      case 'DAYS':
-        if (['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(novelty.type)) {
-          return `${novelty.discountDays} días`;
-        }
-        return `${novelty.days} días ($${calculateMoneyValue().toLocaleString()})`;
-      case 'MONEY':
-        return `$${novelty.bonusAmount.toLocaleString()}`;
-      case 'HOURS':
-        return `${novelty.hours} horas ($${calculateMoneyValue().toLocaleString()})`;
-      default:
-        return '-';
-    }
-  };
 
   // Get available types for the selected category
   const getAvailableTypes = () => {
@@ -532,7 +497,8 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                           red: 'bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800',
                           blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800',
                           green: 'bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800',
-                          purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800'
+                          purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
+                          indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:text-indigo-800'
                         };
                         
                         return (
@@ -576,7 +542,8 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                       red: 'bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800',
                       blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800',
                       green: 'bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800',
-                      purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800'
+                      purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
+                      indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:text-indigo-800'
                     };
                     return (
                       <button
@@ -642,8 +609,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                             default: return novelty.days * 37200;
                           }
                         }
-                        purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
-                        indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:text-indigo-800'
+                        return 0;
                       };
 
                       return (
