@@ -640,10 +640,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                             case 'SUNDAY_WORK': return novelty.days * 37200;
                             default: return novelty.days * 37200;
                           }
-                        }
-                        purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
-                        indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:text-indigo-800'
-                      };
+                     };
 
                       return (
                         <tr key={novelty.id} className="hover:bg-green-50 transition-colors">
