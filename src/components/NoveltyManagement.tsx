@@ -69,6 +69,15 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
       ]
     },
     {
+      id: 'licenses',
+      name: 'Licencias',
+      icon: Gift,
+      color: 'indigo',
+      types: [
+        { value: 'STUDY_LICENSE', label: 'Licencia por estudio', unitType: 'MONEY' as const },
+      ]
+    },
+    {
       id: 'bonuses',
       name: 'Bonificaciones',
       icon: Gift,
@@ -156,6 +165,10 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     const typeInfo = getNoveltyTypeInfo(formData.type);
     const value = parseFloat(formData.value);
 
+    // Check if this is a recurring license
+    const isRecurringLicense = formData.type === 'STUDY_LICENSE';
+    const currentMonth = formData.date.slice(0, 7);
+
     const baseNovelty = {
       employeeId: formData.employeeId,
       employeeName: employee.name,
@@ -167,6 +180,8 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
       hours: typeInfo.unitType === 'HOURS' ? value : undefined,
       days: typeInfo.unitType === 'DAYS' && !['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(formData.type) ? value : undefined,
       unitType: typeInfo.unitType,
+      isRecurring: isRecurringLicense,
+      startMonth: isRecurringLicense ? currentMonth : undefined,
     };
 
     if (editingNovelty) {
@@ -190,7 +205,15 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
   };
 
   const handleDelete = (noveltyId: string) => {
-    if (confirm('¿Estás seguro de que quieres eliminar esta novedad?')) {
+    const novelty = novelties.find(n => n.id === noveltyId);
+    
+    let confirmMessage = '¿Estás seguro de que quieres eliminar esta novedad?';
+    
+    if (novelty?.isRecurring) {
+      confirmMessage = `⚠️ ATENCIÓN: Esta es una licencia recurrente que se aplica automáticamente cada mes desde ${novelty.startMonth}.\n\n¿Estás seguro de que quieres eliminarla? Esto detendrá su aplicación automática en futuros meses.`;
+    }
+    
+    if (confirm(confirmMessage)) {
       setNovelties(novelties.filter(n => n.id !== noveltyId));
     }
   };
@@ -342,16 +365,36 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
   };
 
   const getNoveltyDisplayValue = (novelty: Novelty) => {
+    const calculateMoneyValue = () => {
+      if (novelty.unitType === 'MONEY') return novelty.bonusAmount;
+      if (novelty.unitType === 'HOURS' && novelty.hours) {
+        // Calculate money value based on hour type
+        switch (novelty.type) {
+          case 'FIXED_OVERTIME': return novelty.hours * 6200; // ordinaryHour rate
+          case 'UNEXPECTED_OVERTIME': return novelty.hours * 7800; // overtime rate
+          case 'NIGHT_SURCHARGE': return novelty.hours * 2200; // nightSurcharge rate
+          default: return novelty.hours * 6200;
+        }
+      }
+      if (novelty.unitType === 'DAYS' && novelty.days) {
+        switch (novelty.type) {
+          case 'SUNDAY_WORK': return novelty.days * 37200; // sunday1 rate
+          default: return novelty.days * 37200;
+        }
+      }
+      return 0;
+    };
+
     switch (novelty.unitType) {
       case 'DAYS':
         if (['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(novelty.type)) {
           return `${novelty.discountDays} días`;
         }
-        return `${novelty.days} días`;
+        return `${novelty.days} días ($${calculateMoneyValue().toLocaleString()})`;
       case 'MONEY':
         return `$${novelty.bonusAmount.toLocaleString()}`;
       case 'HOURS':
-        return `${novelty.hours} horas`;
+        return `${novelty.hours} horas ($${calculateMoneyValue().toLocaleString()})`;
       default:
         return '-';
     }
@@ -556,6 +599,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -566,24 +610,71 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                       const typeInfo = getNoveltyTypeInfo(novelty.type);
                       const Icon = typeInfo.categoryIcon;
                       const isDeduction = ['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(novelty.type);
+                      
+                      const getQuantityDisplay = () => {
+                        if (novelty.unitType === 'HOURS' && novelty.hours) {
+                          return `${novelty.hours} ${novelty.hours === 1 ? 'hora' : 'horas'}`;
+                        }
+                        if (novelty.unitType === 'DAYS') {
+                          if (isDeduction) {
+                            return `${novelty.discountDays} ${novelty.discountDays === 1 ? 'día' : 'días'}`;
+                          }
+                          if (novelty.days) {
+                            return `${novelty.days} ${novelty.days === 1 ? 'día' : 'días'}`;
+                          }
+                        }
+                        return '-';
+                      };
+
+                      const getMoneyValue = () => {
+                        if (novelty.unitType === 'MONEY') return novelty.bonusAmount;
+                        if (novelty.unitType === 'HOURS' && novelty.hours) {
+                          switch (novelty.type) {
+                            case 'FIXED_OVERTIME': return novelty.hours * 6200;
+                            case 'UNEXPECTED_OVERTIME': return novelty.hours * 7800;
+                            case 'NIGHT_SURCHARGE': return novelty.hours * 2200;
+                            default: return novelty.hours * 6200;
+                          }
+                        }
+                        if (novelty.unitType === 'DAYS' && novelty.days) {
+                          switch (novelty.type) {
+                            case 'SUNDAY_WORK': return novelty.days * 37200;
+                            default: return novelty.days * 37200;
+                          }
+                        }
+                        purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
+                        indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:text-indigo-800'
+                      };
+
                       return (
                         <tr key={novelty.id} className="hover:bg-green-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-${typeInfo.categoryColor}-100 text-${typeInfo.categoryColor}-800`}>
                               <Icon className="h-3 w-3 mr-1" />
                               {typeInfo.label}
+                              {novelty.isRecurring && (
+                                <span className="ml-1 text-xs">🔄</span>
+                              )}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <Calendar className="h-4 w-4 text-gray-400 mr-2" />
                               <span className="text-sm text-gray-900">{new Date(novelty.date).toLocaleDateString()}</span>
+                              {novelty.isRecurring && (
+                                <span className="ml-2 text-xs text-indigo-600 font-medium">
+                                  (Desde {novelty.startMonth})
+                                </span>
+                              )}
                             </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-gray-900">{getQuantityDisplay()}</span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`text-sm font-medium ${isDeduction || ['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type) ? 'text-red-600' : 'text-green-600'}`}>
                               {isDeduction || ['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type) ? '-' : '+'}
-                              {getNoveltyDisplayValue(novelty)}
+                              ${getMoneyValue().toLocaleString()}
                             </span>
                           </td>
                           <td className="px-6 py-4">

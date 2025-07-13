@@ -149,6 +149,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       nightSurcharge: 0,
       sundayWork: 0,
       gasAllowance: 0,
+      studyLicense: 0,
       total: 0
     };
 
@@ -187,13 +188,16 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
         case 'GAS_ALLOWANCE':
           calculations.gasAllowance += novelty.bonusAmount;
           break;
+        case 'STUDY_LICENSE':
+          calculations.studyLicense += novelty.bonusAmount;
+          break;
       }
     });
 
     calculations.total = calculations.fixedCompensation + calculations.salesBonus + 
                        calculations.fixedOvertime + calculations.unexpectedOvertime + 
                        calculations.nightSurcharge + calculations.sundayWork + 
-                       calculations.gasAllowance;
+                       calculations.gasAllowance + calculations.studyLicense;
 
     return calculations;
   };
@@ -496,6 +500,9 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                             <div className="text-red-600 text-xs">
                               -{calc.discountedDays} días descontados
                             </div>
+                          )}
+                          {(calc.bonusCalculations?.studyLicense || 0) > 0 && (
+                            <div className="text-green-600 text-xs">Lic. estudio: +${(calc.bonusCalculations?.studyLicense || 0).toLocaleString()}</div>
                           )}
                         </div>
                       </td>

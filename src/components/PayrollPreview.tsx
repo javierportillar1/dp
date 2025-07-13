@@ -216,6 +216,12 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
                             <span className="text-green-600 font-medium">${calc.bonusCalculations.gasAllowance.toLocaleString()}</span>
                           </div>
                         )}
+                        {calc.bonusCalculations.studyLicense > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">Licencia por estudio</span>
+                            <span className="text-green-600 font-medium">${calc.bonusCalculations.studyLicense.toLocaleString()}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                     
