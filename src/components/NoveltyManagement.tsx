@@ -568,15 +568,14 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
                     <h4 className="font-semibold text-gray-900">{employee.name}</h4>
                     <p className="text-sm text-gray-500">{employee.contractType}</p>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
                   {noveltyCategories.map((category) => {
                     const Icon = category.icon;
                     const colorClasses = {
                       red: 'bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800',
                       blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800',
                       green: 'bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800',
-                      purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800'
+                      purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
+                      indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:text-indigo-800'
                     };
                     return (
                       <button
