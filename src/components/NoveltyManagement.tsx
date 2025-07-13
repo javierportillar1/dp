@@ -1,3 +1,4 @@
+                        ```typescript
                         return novelty.bonusAmount;
                       }
                       return 0;
