@@ -1,349 +1,554 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Calendar, 
-  AlertTriangle, 
-  Users, 
-  DollarSign,
-  Clock,
-  Award,
-  Heart,
-  Briefcase,
-  Gift
-} from 'lucide-react';
-import { Employee, Novelty, NoveltyType } from '../types';
+import React, { useState } from 'react';
+import { Plus, Calendar, User, AlertTriangle, Heart, Plane, Gift, DollarSign, Save, X, Trash2, Edit } from 'lucide-react';
+import { Employee, Novelty } from '../types';
+import { formatMonthYear } from '../utils/dateUtils';
 
 interface NoveltyManagementProps {
   employees: Employee[];
   novelties: Novelty[];
-  onAddNovelty: (novelty: Omit<Novelty, 'id'>) => void;
-  onUpdateNovelty: (id: string, novelty: Partial<Novelty>) => void;
-  onDeleteNovelty: (id: string) => void;
-  currentMonth: string;
+  setNovelties: (novelties: Novelty[]) => void;
 }
 
-const noveltyCategories = [
-  {
-    id: 'disciplinary',
-    name: 'Disciplinarias',
-    color: 'red',
-    icon: AlertTriangle,
-    types: [
-      { value: 'LLAMADO_ATENCION', label: 'Llamado de atención', unitType: 'MONEY' },
-      { value: 'SUSPENSION', label: 'Suspensión', unitType: 'DAYS' },
-      { value: 'MULTA', label: 'Multa', unitType: 'MONEY' }
-    ]
-  },
-  {
-    id: 'health',
-    name: 'Salud',
-    color: 'blue',
-    icon: Heart,
-    types: [
-      { value: 'INCAPACIDAD_EPS', label: 'Incapacidad EPS', unitType: 'DAYS' },
-      { value: 'INCAPACIDAD_ARL', label: 'Incapacidad ARL', unitType: 'DAYS' },
-      { value: 'LICENCIA_MATERNIDAD', label: 'Licencia de maternidad', unitType: 'DAYS' }
-    ]
-  },
-  {
-    id: 'vacation',
-    name: 'Vacaciones',
-    color: 'green',
-    icon: Calendar,
-    types: [
-      { value: 'VACACIONES', label: 'Vacaciones', unitType: 'DAYS' },
-      { value: 'COMPENSATORIO', label: 'Compensatorio', unitType: 'DAYS' }
-    ]
-  },
-  {
-    id: 'bonifications',
-    name: 'Bonificaciones',
-    color: 'purple',
-    icon: Award,
-    types: [
-      { value: 'HORAS_EXTRA_FIJAS', label: 'Horas extra fijas', unitType: 'HOURS' },
-      { value: 'HORAS_EXTRA_NE', label: 'Horas extra NE', unitType: 'HOURS' },
-      { value: 'RECARGO_NOCTURNO', label: 'Recargo nocturno', unitType: 'HOURS' },
-      { value: 'FESTIVOS', label: 'Festivos', unitType: 'DAYS' },
-      { value: 'BONIFICACION_VENTA', label: 'Bonificación en venta', unitType: 'MONEY' },
-      { value: 'BONIFICACION_ESPECIAL', label: 'Bonificación especial', unitType: 'MONEY' }
-    ]
-  },
-  {
-    id: 'licenses',
-    name: 'Licencias',
-    color: 'indigo',
-    icon: Gift,
-    types: [
-      { value: 'STUDY_LICENSE', label: 'Licencia por estudio', unitType: 'MONEY' }
-    ]
-  },
-  {
-    id: 'deductions',
-    name: 'Deducciones',
-    color: 'gray',
-    icon: DollarSign,
-    types: [
-      { value: 'PLAN_CORPORATIVO', label: 'Plan corporativo', unitType: 'MONEY' },
-      { value: 'RECORDAR', label: 'Recordar', unitType: 'MONEY' },
-      { value: 'INVENTARIOS_CRUCES', label: 'Inventarios cruces', unitType: 'MONEY' },
-      { value: 'MULTAS', label: 'Multas', unitType: 'MONEY' },
-      { value: 'FONDO_EMPLEADOS', label: 'Fondo empleados', unitType: 'MONEY' },
-      { value: 'CARTERA_EMPLEADOS', label: 'Cartera empleados', unitType: 'MONEY' }
-    ]
-  }
-];
-
-const getNoveltyTypeInfo = (type: NoveltyType) => {
-  for (const category of noveltyCategories) {
-    const typeInfo = category.types.find(t => t.value === type);
-    if (typeInfo) {
-      return {
-        ...typeInfo,
-        categoryColor: category.color,
-        categoryIcon: category.icon
-      };
-    }
-  }
-  return { 
-    label: type, 
-    unitType: 'MONEY' as const, 
-    categoryColor: 'gray', 
-    categoryIcon: DollarSign 
+interface BulkNoveltyData {
+  [employeeId: string]: {
+    type: Novelty['type'];
+    value: string;
+    description: string;
   };
-};
-
-const getUnitLabel = (unitType: string) => {
-  switch (unitType) {
-    case 'HOURS': return 'horas';
-    case 'DAYS': return 'días';
-    case 'MONEY': return 'pesos';
-    default: return 'unidades';
-  }
-};
+}
 
 export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
   employees,
   novelties,
-  onAddNovelty,
-  onUpdateNovelty,
-  onDeleteNovelty,
-  currentMonth
+  setNovelties
 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingNovelty, setEditingNovelty] = useState<Novelty | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [bulkNoveltyData, setBulkNoveltyData] = useState<BulkNoveltyData>({});
+  const [editingEmployees, setEditingEmployees] = useState<Set<string>>(new Set());
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  
   const [formCategory, setFormCategory] = useState<string>('');
   const [formData, setFormData] = useState({
     employeeId: '',
-    type: 'HORAS_EXTRA_FIJAS' as NoveltyType,
-    date: new Date().toISOString().split('T')[0],
-    value: '',
-    description: ''
+    type: 'ABSENCE' as Novelty['type'],
+    date: '',
+    description: '',
+    value: '1',
   });
+  const [editingNovelty, setEditingNovelty] = useState<Novelty | null>(null);
 
-  // Auto-apply recurring licenses
-  useEffect(() => {
-    const applyRecurringLicenses = () => {
-      const currentDate = new Date();
-      const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-      
-      // Find all licenses that should be recurring
-      const recurringLicenses = novelties.filter(n => 
-        n.type === 'STUDY_LICENSE' && 
-        n.isRecurring &&
-        n.startMonth &&
-        n.startMonth <= currentMonthStr
-      );
+  const noveltyCategories = [
+    {
+      id: 'disciplinary',
+      name: 'Disciplinarias',
+      icon: AlertTriangle,
+      color: 'red',
+      types: [
+        { value: 'ABSENCE', label: 'Ausencia', unitType: 'DAYS' as const },
+        { value: 'LATE', label: 'Llegada tarde', unitType: 'HOURS' as const },
+        { value: 'EARLY_LEAVE', label: 'Salida temprana', unitType: 'HOURS' as const },
+      ]
+    },
+    {
+      id: 'health',
+      name: 'Salud',
+      icon: Heart,
+      color: 'blue',
+      types: [
+        { value: 'MEDICAL_LEAVE', label: 'Incapacidad médica', unitType: 'DAYS' as const },
+      ]
+    },
+    {
+      id: 'vacation',
+      name: 'Vacaciones',
+      icon: Plane,
+      color: 'green',
+      types: [
+        { value: 'VACATION', label: 'Vacaciones', unitType: 'DAYS' as const },
+      ]
+    },
+    {
+      id: 'licenses',
+      name: 'Licencias',
+      icon: Gift,
+      color: 'indigo',
+      types: [
+        { value: 'STUDY_LICENSE', label: 'Licencia por estudio', unitType: 'MONEY' as const },
+      ]
+    },
+    {
+      id: 'bonuses',
+      name: 'Bonificaciones',
+      icon: Gift,
+      color: 'purple',
+      types: [
+        { value: 'FIXED_COMPENSATION', label: 'Compensatorios fijos', unitType: 'MONEY' as const },
+        { value: 'SALES_BONUS', label: 'Bonificación en venta', unitType: 'MONEY' as const },
+        { value: 'FIXED_OVERTIME', label: 'Horas extra fijas', unitType: 'HOURS' as const },
+        { value: 'UNEXPECTED_OVERTIME', label: 'Horas extra NE', unitType: 'HOURS' as const },
+        { value: 'NIGHT_SURCHARGE', label: 'Recargos nocturnos', unitType: 'HOURS' as const },
+        { value: 'SUNDAY_WORK', label: 'Festivos', unitType: 'DAYS' as const },
+        { value: 'GAS_ALLOWANCE', label: 'Auxilio de gasolina', unitType: 'MONEY' as const },
+      ]
+    },
+    {
+      id: 'deductions_q2',
+      name: 'Deducciones Quincena 2',
+      icon: DollarSign,
+      color: 'yellow',
+      types: [
+        { value: 'PLAN_CORPORATIVO', label: 'Plan corporativo', unitType: 'MONEY' as const },
+        { value: 'RECORDAR', label: 'Recordar', unitType: 'MONEY' as const },
+        { value: 'INVENTARIOS_CRUCES', label: 'Inventarios y cruces', unitType: 'MONEY' as const },
+        { value: 'MULTAS', label: 'Multas', unitType: 'MONEY' as const },
+        { value: 'FONDO_EMPLEADOS', label: 'Fondo de empleados', unitType: 'MONEY' as const },
+        { value: 'CARTERA_EMPLEADOS', label: 'Cartera empleados', unitType: 'MONEY' as const },
+      ]
+    }
+  ];
 
-      recurringLicenses.forEach(license => {
-        // Check if this license already exists for current month
-        const existsThisMonth = novelties.some(n => 
-          n.employeeId === license.employeeId &&
-          n.type === license.type &&
-          n.date.startsWith(currentMonthStr) &&
-          n.id !== license.id
-        );
+  // Get employees with and without novelties for selected month
+  const employeesWithNovelties = novelties
+    .filter(novelty => novelty.date.startsWith(selectedMonth))
+    .map(novelty => novelty.employeeId);
+  
+  const employeesWithoutNovelties = employees
+    .filter(emp => !employeesWithNovelties.includes(emp.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  
+  const employeesWithNoveltiesData = employees
+    .filter(emp => employeesWithNovelties.includes(emp.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-        if (!existsThisMonth) {
-          // Auto-apply the license for current month
-          onAddNovelty({
-            employeeId: license.employeeId,
-            type: license.type,
-            date: `${currentMonthStr}-01`,
-            value: license.value,
-            description: `Auto-aplicada desde ${license.startMonth}`,
-            isRecurring: true,
-            startMonth: license.startMonth
-          });
-        }
-      });
+  const noveltiesByEmployee = novelties
+    .filter(novelty => novelty.date.startsWith(selectedMonth))
+    .reduce<Record<string, Novelty[]>>((acc, novelty) => {
+      if (!acc[novelty.employeeId]) acc[novelty.employeeId] = [];
+      acc[novelty.employeeId].push(novelty);
+      return acc;
+    }, {});
+
+  const getNoveltyTypeInfo = (type: Novelty['type']) => {
+    for (const category of noveltyCategories) {
+      const noveltyType = category.types.find(t => t.value === type);
+      if (noveltyType) {
+        return { 
+          ...noveltyType, 
+          categoryColor: category.color, 
+          categoryIcon: category.icon 
+        };
+      }
+    }
+    return { 
+      ...noveltyCategories[0].types[0], 
+      categoryColor: noveltyCategories[0].color, 
+      categoryIcon: noveltyCategories[0].icon 
     };
+  };
 
-    applyRecurringLicenses();
-  }, [novelties, onAddNovelty]);
+  const getUnitLabel = (unitType: 'DAYS' | 'MONEY' | 'HOURS') => {
+    switch (unitType) {
+      case 'DAYS': return 'días';
+      case 'MONEY': return 'pesos';
+      case 'HOURS': return 'horas';
+      default: return '';
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const noveltyData = {
+
+    const employee = employees.find(emp => emp.id === formData.employeeId);
+    if (!employee) return;
+
+    const typeInfo = getNoveltyTypeInfo(formData.type);
+    const value = parseFloat(formData.value);
+
+    // Check if this is a recurring license
+    const isRecurringLicense = formData.type === 'STUDY_LICENSE';
+    const currentMonth = formData.date.slice(0, 7);
+
+    const baseNovelty = {
       employeeId: formData.employeeId,
+      employeeName: employee.name,
       type: formData.type,
       date: formData.date,
-      value: parseFloat(formData.value),
-      description: formData.description
+      description: formData.description,
+      discountDays: typeInfo.unitType === 'DAYS' && ['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(formData.type) ? value : 0,
+      bonusAmount: typeInfo.unitType === 'MONEY' ? value : 0,
+      hours: typeInfo.unitType === 'HOURS' ? value : undefined,
+      days: typeInfo.unitType === 'DAYS' && !['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(formData.type) ? value : undefined,
+      unitType: typeInfo.unitType,
+      isRecurring: isRecurringLicense,
+      startMonth: isRecurringLicense ? currentMonth : undefined,
     };
 
-    // Check if it's a license type and should be recurring
-    if (formData.type === 'STUDY_LICENSE') {
-      const startMonth = formData.date.substring(0, 7); // YYYY-MM format
-      Object.assign(noveltyData, {
-        isRecurring: true,
-        startMonth: startMonth
-      });
+    if (editingNovelty) {
+      const updated: Novelty = { ...editingNovelty, ...baseNovelty };
+      setNovelties(novelties.map(n => n.id === editingNovelty.id ? updated : n));
+    } else {
+      const newNovelty: Novelty = { id: crypto.randomUUID(), ...baseNovelty };
+      setNovelties([...novelties, newNovelty]);
     }
 
-    if (editingNovelty) {
-      onUpdateNovelty(editingNovelty.id, noveltyData);
-    } else {
-      onAddNovelty(noveltyData);
-    }
-    
-    setIsFormOpen(false);
-    setEditingNovelty(null);
     setFormData({
       employeeId: '',
-      type: 'HORAS_EXTRA_FIJAS',
-      date: new Date().toISOString().split('T')[0],
-      value: '',
-      description: ''
+      type: 'ABSENCE',
+      date: '',
+      description: '',
+      value: '1',
     });
+    setFormCategory('');
+    setEditingNovelty(null);
+    setIsFormOpen(false);
+  };
+
+  const handleDelete = (noveltyId: string) => {
+    const novelty = novelties.find(n => n.id === noveltyId);
+    
+    let confirmMessage = '¿Estás seguro de que quieres eliminar esta novedad?';
+    
+    if (novelty?.isRecurring) {
+      confirmMessage = `⚠️ ATENCIÓN: Esta es una licencia recurrente que se aplica automáticamente cada mes desde ${novelty.startMonth}.\n\n¿Estás seguro de que quieres eliminarla? Esto detendrá su aplicación automática en futuros meses.`;
+    }
+    
+    if (confirm(confirmMessage)) {
+      setNovelties(novelties.filter(n => n.id !== noveltyId));
+    }
   };
 
   const handleEdit = (novelty: Novelty) => {
-    setEditingNovelty(novelty);
+    const value = (() => {
+      if (novelty.unitType === 'MONEY') return novelty.bonusAmount;
+      if (novelty.unitType === 'HOURS') return novelty.hours ?? 0;
+      if (['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(novelty.type)) {
+        return novelty.discountDays;
+      }
+      return novelty.days ?? 0;
+    })();
+
     setFormData({
       employeeId: novelty.employeeId,
       type: novelty.type,
       date: novelty.date,
-      value: novelty.value.toString(),
-      description: novelty.description || ''
+      description: novelty.description,
+      value: value.toString(),
     });
+    const category = noveltyCategories.find(c =>
+      c.types.some(t => t.value === novelty.type)
+    );
+    setFormCategory(category?.id || '');
+    setEditingNovelty(novelty);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    const novelty = novelties.find(n => n.id === id);
-    
-    if (novelty?.isRecurring && novelty.type === 'STUDY_LICENSE') {
-      const confirmMessage = `¿Estás seguro de eliminar esta licencia recurrente?\n\nEsto detendrá la aplicación automática de la licencia en futuros meses.`;
-      if (window.confirm(confirmMessage)) {
-        onDeleteNovelty(id);
+  const handleAddForEmployee = (employeeId: string, categoryId?: string) => {
+    const category = categoryId
+      ? noveltyCategories.find(c => c.id === categoryId)
+      : undefined;
+    setFormData({
+      employeeId,
+      type: (category?.types[0].value || 'ABSENCE') as Novelty['type'],
+      date: new Date().toISOString().slice(0, 10),
+      description: '',
+      value: '1',
+    });
+    setFormCategory(categoryId || '');
+    setEditingNovelty(null);
+    setIsFormOpen(true);
+  };
+
+  const handleBulkNoveltyChange = (employeeId: string, field: keyof BulkNoveltyData[string], value: string) => {
+    setBulkNoveltyData(prev => ({
+      ...prev,
+      [employeeId]: {
+        ...prev[employeeId],
+        [field]: value
       }
+    }));
+  };
+
+  const handleEditEmployee = (employeeId: string, categoryId: string) => {
+    // Si el empleado ya está siendo editado, solo cambiar la categoría
+    if (editingEmployees.has(employeeId)) {
+      setSelectedCategory(categoryId);
+      const category = noveltyCategories.find(c => c.id === categoryId);
+      setBulkNoveltyData(prev => ({
+        ...prev,
+        [employeeId]: {
+          ...prev[employeeId],
+          type: (category?.types[0].value || 'ABSENCE') as Novelty['type'],
+        }
+      }));
     } else {
-      if (window.confirm('¿Estás seguro de eliminar esta novedad?')) {
-        onDeleteNovelty(id);
-      }
+      // Si no está siendo editado, iniciar la edición
+      setEditingEmployees(prev => new Set([...prev, employeeId]));
+      setSelectedCategory(categoryId);
+      const category = noveltyCategories.find(c => c.id === categoryId);
+      setBulkNoveltyData(prev => ({
+        ...prev,
+        [employeeId]: {
+          type: (category?.types[0].value || 'ABSENCE') as Novelty['type'],
+          value: '1',
+          description: ''
+        }
+      }));
     }
   };
 
-  const openForm = (category?: string) => {
-    setFormCategory(category || '');
-    if (category) {
-      const categoryData = noveltyCategories.find(c => c.id === category);
-      if (categoryData && categoryData.types.length > 0) {
-        setFormData(prev => ({ ...prev, type: categoryData.types[0].value as NoveltyType }));
-      }
-    }
-    setIsFormOpen(true);
+  const handleCancelEdit = (employeeId: string) => {
+    setEditingEmployees(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(employeeId);
+      return newSet;
+    });
+    setBulkNoveltyData(prev => {
+      const newData = { ...prev };
+      delete newData[employeeId];
+      return newData;
+    });
+    setSelectedCategory('');
   };
 
-  const employeesWithNoveltiesData = employees.map(employee => {
-    const employeeNovelties = novelties.filter(n => n.employeeId === employee.id);
-    const noveltiesByCategory = noveltyCategories.reduce((acc, category) => {
-      acc[category.id] = employeeNovelties.filter(novelty => 
-        category.types.some(type => type.value === novelty.type)
-      );
-      return acc;
-    }, {} as Record<string, Novelty[]>);
+  const handleSaveBulkNovelties = () => {
+    const newNovelties: Novelty[] = [];
+    
+    Object.entries(bulkNoveltyData).forEach(([employeeId, data]) => {
+      const employee = employees.find(emp => emp.id === employeeId);
+      if (employee && data.type && data.value) {
+        const typeInfo = getNoveltyTypeInfo(data.type);
+        const value = parseFloat(data.value);
+        
+        if (value > 0) {
+          newNovelties.push({
+            id: crypto.randomUUID(),
+            employeeId,
+            employeeName: employee.name,
+            type: data.type,
+            date: new Date().toISOString().slice(0, 10),
+            description: data.description || '',
+            discountDays: typeInfo.unitType === 'DAYS' && ['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(data.type) ? value : 0,
+            bonusAmount: typeInfo.unitType === 'MONEY' ? value : 0,
+            hours: typeInfo.unitType === 'HOURS' ? value : undefined,
+            days: typeInfo.unitType === 'DAYS' && !['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(data.type) ? value : undefined,
+            unitType: typeInfo.unitType,
+          });
+        }
+      }
+    });
 
-    return {
-      employee,
-      novelties: employeeNovelties,
-      noveltiesByCategory
+    if (newNovelties.length > 0) {
+      setNovelties([...novelties, ...newNovelties]);
+      // Limpiar solo los datos guardados, pero mantener el estado de edición
+      const savedEmployeeIds = Object.keys(bulkNoveltyData).filter(employeeId => {
+        const data = bulkNoveltyData[employeeId];
+        return data.type && data.value && parseFloat(data.value) > 0;
+      });
+      
+      setBulkNoveltyData(prev => {
+        const newData = { ...prev };
+        savedEmployeeIds.forEach(employeeId => {
+          delete newData[employeeId];
+        });
+        return newData;
+      });
+      
+      setEditingEmployees(prev => {
+        const newSet = new Set(prev);
+        savedEmployeeIds.forEach(employeeId => {
+          newSet.delete(employeeId);
+        });
+        return newSet;
+      });
+    }
+  };
+
+  const getNoveltyDisplayValue = (novelty: Novelty) => {
+    const calculateMoneyValue = () => {
+      if (novelty.unitType === 'MONEY') return novelty.bonusAmount;
+      if (novelty.unitType === 'HOURS' && novelty.hours) {
+        // Calculate money value based on hour type
+        switch (novelty.type) {
+          case 'FIXED_OVERTIME': return novelty.hours * 6200; // ordinaryHour rate
+          case 'UNEXPECTED_OVERTIME': return novelty.hours * 7800; // overtime rate
+          case 'NIGHT_SURCHARGE': return novelty.hours * 2200; // nightSurcharge rate
+          default: return novelty.hours * 6200;
+        }
+      }
+      if (novelty.unitType === 'DAYS' && novelty.days) {
+        switch (novelty.type) {
+          case 'SUNDAY_WORK': return novelty.days * 37200; // sunday1 rate
+          default: return novelty.days * 37200;
+        }
+      }
+      return 0;
     };
-  }).filter(data => data.novelties.length > 0);
 
-  const employeesWithoutNovelties = employees.filter(employee => 
-    !novelties.some(novelty => novelty.employeeId === employee.id)
-  );
+    switch (novelty.unitType) {
+      case 'DAYS':
+        if (['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(novelty.type)) {
+          return `${novelty.discountDays} días`;
+        }
+        return `${novelty.days} días ($${calculateMoneyValue().toLocaleString()})`;
+      case 'MONEY':
+        return `$${novelty.bonusAmount.toLocaleString()}`;
+      case 'HOURS':
+        return `${novelty.hours} horas ($${calculateMoneyValue().toLocaleString()})`;
+      default:
+        return '-';
+    }
+  };
+
+  // Get available types for the selected category
+  const getAvailableTypes = () => {
+    if (!selectedCategory) return [];
+    const category = noveltyCategories.find(c => c.id === selectedCategory);
+    return category?.types || [];
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Gestión de Novedades</h2>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mes
+            </label>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
           <button
-            onClick={() => openForm()}
-            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center"
+            onClick={() => setIsFormOpen(true)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Registrar Novedad Individual
+            <Plus className="h-4 w-4" />
+            <span>Novedad Individual</span>
           </button>
         </div>
       </div>
 
-      {/* Category buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {noveltyCategories.map((category) => {
-          const Icon = category.icon;
-          const colorClasses = {
-            red: 'bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800',
-            blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800',
-            green: 'bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800',
-            purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
-            indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:text-indigo-800',
-            gray: 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-800'
-          };
-
-          return (
-            <button
-              key={category.id}
-              onClick={() => openForm(category.id)}
-              className={`p-4 rounded-lg border-2 border-transparent transition-all ${colorClasses[category.color as keyof typeof colorClasses]}`}
-            >
-              <Icon className="h-6 w-6 mx-auto mb-2" />
-              <span className="text-sm font-medium">{category.name}</span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Employees without novelties */}
       {employeesWithoutNovelties.length > 0 && (
-        <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Users className="h-5 w-5 mr-2" />
-            Empleados sin Novedades Registradas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-md border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 bg-blue-50">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-blue-900">
+                Empleados sin Novedades - {formatMonthYear(selectedMonth)}
+              </h3>
+              {Object.keys(bulkNoveltyData).length > 0 && (
+                <button
+                  onClick={handleSaveBulkNovelties}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Guardar Novedades</span>
+                </button>
+              )}
+            </div>
+          </div>
+          
+          <div className="divide-y divide-gray-200">
             {employeesWithoutNovelties.map((employee) => (
-              <div key={employee.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <div key={employee.id} className="px-6 py-4 hover:bg-blue-50 transition-colors">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-gray-900">{employee.name}</h4>
-                    <p className="text-sm text-gray-500">{employee.position}</p>
+                  <div className="flex items-center space-x-3">
+                    <User className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <span className="font-medium text-gray-900">{employee.name}</span>
+                      <p className="text-sm text-gray-500">{employee.contractType}</p>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, employeeId: employee.id }));
-                      openForm();
-                    }}
-                    className="text-orange-600 hover:text-orange-800 p-1"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
+                  
+                  {editingEmployees.has(employee.id) ? (
+                    <div className="flex items-center space-x-3">
+                      <select
+                        value={bulkNoveltyData[employee.id]?.type || ''}
+                        onChange={(e) => handleBulkNoveltyChange(employee.id, 'type', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Seleccionar tipo</option>
+                        {getAvailableTypes().map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      <div className="flex items-center space-x-1">
+                        <input
+                          type="number"
+                          step="0.5"
+                          placeholder="Valor"
+                          value={bulkNoveltyData[employee.id]?.value || ''}
+                          onChange={(e) => handleBulkNoveltyChange(employee.id, 'value', e.target.value)}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <span className="text-xs text-gray-500">
+                          {(() => {
+                            const selectedType = bulkNoveltyData[employee.id]?.type;
+                            if (selectedType) {
+                              const typeInfo = getNoveltyTypeInfo(selectedType);
+                              return getUnitLabel(typeInfo.unitType);
+                            }
+                            return '';
+                          })()}
+                        </span>
+                      </div>
+                      
+                      <input
+                        type="text"
+                        placeholder="Descripción"
+                        value={bulkNoveltyData[employee.id]?.description || ''}
+                        onChange={(e) => handleBulkNoveltyChange(employee.id, 'description', e.target.value)}
+                        className="w-32 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      
+                      <button
+                        onClick={() => handleCancelEdit(employee.id)}
+                        className="text-gray-500 hover:text-gray-700 p-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null}
+                  
+                  {/* Siempre mostrar los botones de categorías */}
+                  <div className="flex items-center space-x-2">
+                    {editingEmployees.has(employee.id) && (
+                      <div className="text-xs text-blue-600 font-medium mr-2">
+                        Editando...
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      {noveltyCategories.map((category) => {
+                        const Icon = category.icon;
+                        const colorClasses = {
+                          red: 'bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800',
+                          blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800',
+                          green: 'bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800',
+                          purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800'
+                        };
+                        
+                        return (
+                          <button
+                            key={category.id}
+                            onClick={() => handleEditEmployee(employee.id, category.id)}
+                            className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 hover:shadow-md ${colorClasses[category.color as keyof typeof colorClasses]}`}
+                            title={category.name}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span>{category.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -354,114 +559,91 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
       {/* Employees with novelties */}
       {employeesWithNoveltiesData.length > 0 && (
         <div className="space-y-6">
-          {employeesWithNoveltiesData.map(({ employee, noveltiesByCategory }) => (
-            <div key={employee.id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="bg-orange-100 p-2 rounded-full mr-3">
-                      <Users className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{employee.name}</h3>
-                      <p className="text-sm text-gray-600">{employee.position}</p>
-                    </div>
+          {employeesWithNoveltiesData.map(employee => (
+            <div key={employee.id} className="bg-white rounded-lg shadow-md border border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <User className="h-5 w-5 text-green-600" />
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{employee.name}</h4>
+                    <p className="text-sm text-gray-500">{employee.contractType}</p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, employeeId: employee.id }));
-                      openForm();
-                    }}
-                    className="bg-orange-600 text-white px-3 py-1 rounded-lg hover:bg-orange-700 transition-colors flex items-center text-sm"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Agregar
-                  </button>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {noveltyCategories.map((category) => {
+                    const Icon = category.icon;
+                    const colorClasses = {
+                      red: 'bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800',
+                      blue: 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800',
+                      green: 'bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800',
+                      purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800'
+                    };
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => handleAddForEmployee(employee.id, category.id)}
+                        className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 hover:shadow-md ${colorClasses[category.color as keyof typeof colorClasses]}`}
+                        title={category.name}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{category.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Category tabs */}
-              <div className="flex flex-wrap border-b border-gray-200 bg-gray-50">
-                {noveltyCategories.map((category) => {
-                  const categoryNovelties = noveltiesByCategory[category.id] || [];
-                  if (categoryNovelties.length === 0) return null;
-
-                  const Icon = category.icon;
-                  const colorClasses = {
-                    red: 'border-red-500 text-red-700 bg-red-50',
-                    blue: 'border-blue-500 text-blue-700 bg-blue-50',
-                    green: 'border-green-500 text-green-700 bg-green-50',
-                    purple: 'border-purple-500 text-purple-700 bg-purple-50',
-                    indigo: 'border-indigo-500 text-indigo-700 bg-indigo-50',
-                    gray: 'border-gray-500 text-gray-700 bg-gray-50'
-                  };
-
-                  return (
-                    <div
-                      key={category.id}
-                      className={`px-4 py-2 border-b-2 ${colorClasses[category.color as keyof typeof colorClasses]} flex items-center`}
-                    >
-                      <Icon className="h-4 w-4 mr-2" />
-                      <span className="text-sm font-medium">{category.name}</span>
-                      <span className="ml-2 bg-white px-2 py-1 rounded-full text-xs font-semibold">
-                        {categoryNovelties.length}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Novelties table */}
-              <div className="table-container">
-                <table className="min-w-full divide-y divide-gray-200">
+              <div className="overflow-x-auto">
+                <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tipo
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Cantidad
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Valor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Descripción
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Acciones
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {Object.values(noveltiesByCategory).flat().map((novelty) => {
+                    {(noveltiesByEmployee[employee.id] || []).map(novelty => {
                       const typeInfo = getNoveltyTypeInfo(novelty.type);
                       const Icon = typeInfo.categoryIcon;
-                      const isDeduction = ['LLAMADO_ATENCION', 'SUSPENSION', 'MULTA'].includes(novelty.type);
-
+                      const isDeduction = ['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(novelty.type);
+                      
                       const getQuantityDisplay = () => {
-                        if (typeInfo.unitType === 'HOURS') {
-                          return `${novelty.value} horas`;
-                        } else if (typeInfo.unitType === 'DAYS') {
-                          return `${novelty.value} días`;
+                        if (novelty.unitType === 'HOURS' && novelty.hours) {
+                          return `${novelty.hours} ${novelty.hours === 1 ? 'hora' : 'horas'}`;
+                        }
+                        if (novelty.unitType === 'DAYS') {
+                          if (isDeduction) {
+                            return `${novelty.discountDays} ${novelty.discountDays === 1 ? 'día' : 'días'}`;
+                          }
+                          if (novelty.days) {
+                            return `${novelty.days} ${novelty.days === 1 ? 'día' : 'días'}`;
+                          }
                         }
                         return '-';
                       };
 
                       const getMoneyValue = () => {
-                        if (typeInfo.unitType === 'MONEY') {
-                          return novelty.value;
-                        } else if (typeInfo.unitType === 'HOURS') {
-                          if (novelty.type === 'HORAS_EXTRA_FIJAS') return novelty.value * 6200;
-                          if (novelty.type === 'HORAS_EXTRA_NE') return novelty.value * 7800;
-                          if (novelty.type === 'RECARGO_NOCTURNO') return novelty.value * 2200;
-                        } else if (typeInfo.unitType === 'DAYS') {
-                          if (novelty.type === 'FESTIVOS') return novelty.value * 37200;
+                        if (novelty.unitType === 'MONEY') return novelty.bonusAmount;
+                        if (novelty.unitType === 'HOURS' && novelty.hours) {
+                          switch (novelty.type) {
+                            case 'FIXED_OVERTIME': return novelty.hours * 6200;
+                            case 'UNEXPECTED_OVERTIME': return novelty.hours * 7800;
+                            case 'NIGHT_SURCHARGE': return novelty.hours * 2200;
+                            default: return novelty.hours * 6200;
+                          }
                         }
-                        return novelty.value;
+                        if (novelty.unitType === 'DAYS' && novelty.days) {
+                          switch (novelty.type) {
+                            case 'SUNDAY_WORK': return novelty.days * 37200;
+                            default: return novelty.days * 37200;
+                          }
+                        }
+                        purple: 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800',
+                        indigo: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:text-indigo-800'
                       };
 
                       return (
