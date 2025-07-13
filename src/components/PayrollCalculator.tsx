@@ -4,7 +4,6 @@ import { Employee, Novelty, PayrollCalculation, AdvancePayment, DeductionRates, 
 import { getDaysInMonth, formatMonthYear, parseMonthString, isEmployeeActiveInMonth } from '../utils/dateUtils';
 
 const PAYROLL_DAYS = 30;
-const DAILY_TRANSPORT_ALLOWANCE = TRANSPORT_ALLOWANCE / PAYROLL_DAYS;
 
 interface PayrollCalculatorProps {
   employees: Employee[];
@@ -51,18 +50,21 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       // Calculate gross salary based on worked days this month
       const grossSalary = dailySalary * workedDaysThisMonth;
       
+      // Calculate daily transport allowance using configurable rate
+      const dailyTransportAllowance = deductionRates.transportAllowance / PAYROLL_DAYS;
+      
       // Transport allowance (only for NOMINA employees earning less than 2 minimum salaries)
       const transportAllowance = (
         employee.contractType === 'NOMINA' &&
         employee.salary < (MINIMUM_SALARY_COLOMBIA * 2)
-        ) ? DAILY_TRANSPORT_ALLOWANCE * workedDaysThisMonth : 0;
+        ) ? dailyTransportAllowance * workedDaysThisMonth : 0;
         
       // Calculate bonuses from novelties of this month
       const bonusCalculations = calculateBonuses(monthlyNovelties, deductionRates);
       
       // Calculate deductions using configurable rates
       const healthDeduction = grossSalary * (deductionRates.health / 100);
-      const pensionDeduction = grossSalary * (deductionRates.pension / 100);
+      const pensionDeduction = employee.isPensioned ? 0 : grossSalary * (deductionRates.pension / 100);
       const solidarityDeduction = employee.salary >= (MINIMUM_SALARY_COLOMBIA * 4) ? 
         grossSalary * (deductionRates.solidarity / 100) : 0;
       
@@ -87,10 +89,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
         .filter(n => n.type === 'CARTERA_EMPLEADOS')
         .reduce((sum, n) => sum + n.bonusAmount, 0);
 
-      const totalAdvances = employeeAdvances.reduce(
-        (sum, adv) => sum + adv.amount - (adv.employeeFund || 0) - (adv.employeeLoan || 0),
-        0
-      );
+      const totalAdvances = employeeAdvances.reduce((sum, adv) => sum + adv.amount, 0);
 
       const totalDeductions =
         healthDeduction +
@@ -105,6 +104,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
         carteraEmpleadosDed +
         totalAdvances;
       const netSalary = grossSalary + transportAllowance + bonusCalculations.total - totalDeductions;
+      const totalEarned = grossSalary + transportAllowance + bonusCalculations.total;
       
       return {
         employee,
@@ -114,6 +114,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
         discountedDays: monthlyDiscountedDays,
         transportAllowance,
         grossSalary,
+        totalEarned,
         bonuses: bonusCalculations.total,
         deductions: {
           health: healthDeduction,
@@ -161,25 +162,25 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
           break;
         case 'FIXED_OVERTIME': {
           // Horas extra fijas: horas × hora ordinaria
-          const fixedOvertimeAmount = (novelty.hours || 0) * rates.ordinaryHour;
+          const fixedOvertimeAmount = novelty.bonusAmount || ((novelty.hours || 0) * rates.ordinaryHour);
           calculations.fixedOvertime += fixedOvertimeAmount;
           break;
         }
         case 'UNEXPECTED_OVERTIME': {
           // Horas extra NE: horas × horas extra
-          const unexpectedOvertimeAmount = (novelty.hours || 0) * rates.overtime;
+          const unexpectedOvertimeAmount = novelty.bonusAmount || ((novelty.hours || 0) * rates.overtime);
           calculations.unexpectedOvertime += unexpectedOvertimeAmount;
           break;
         }
         case 'NIGHT_SURCHARGE': {
           // Recargos nocturnos: horas × recargos nocturnos
-          const nightSurchargeAmount = (novelty.hours || 0) * rates.nightSurcharge;
+          const nightSurchargeAmount = novelty.bonusAmount || ((novelty.hours || 0) * rates.nightSurcharge);
           calculations.nightSurcharge += nightSurchargeAmount;
           break;
         }
         case 'SUNDAY_WORK': {
           // Festivos: días × dominical 1
-          const sundayWorkAmount = (novelty.days || 0) * rates.sunday1;
+          const sundayWorkAmount = novelty.bonusAmount || ((novelty.days || 0) * rates.sunday1);
           calculations.sundayWork += sundayWorkAmount;
           break;
         }
@@ -302,7 +303,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
     const totalNet = payrollCalculations.reduce((sum, calc) => sum + (calc.netSalary ?? 0), 0);
     const totalAdvancesMonth = advances
       .filter(a => a.month === selectedMonth)
-      .reduce((sum, advance) => sum + advance.amount - (advance.employeeFund || 0) - (advance.employeeLoan || 0), 0);
+      .reduce((sum, advance) => sum + advance.amount, 0);
 
     txtContent += `RESUMEN:\n`;
     txtContent += `Total Salarios Brutos: $${payrollCalculations.reduce((sum, calc) => sum + (calc.grossSalary ?? 0), 0).toLocaleString()}\n`;
@@ -436,17 +437,9 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
             </div>
           </div>
           
-          <div 
-            className="table-container border border-gray-200 rounded-lg" 
-            style={{ 
-              fontSize: `${tableZoom}%`,
-              overflowX: 'scroll',
-              overflowY: 'visible',
-              scrollbarWidth: 'auto',
-              scrollbarColor: '#6b7280 #f1f5f9'
-            }}
-          >
-            <table className="payroll-table w-full border-collapse" style={{ fontSize: `${tableZoom / 100}em` }}>
+          <div className="overflow-x-auto" style={{ fontSize: `${tableZoom}%` }}>
+            <div className="min-w-full" style={{ overflowX: 'scroll' }}>
+              <table className="w-full" style={{ fontSize: `${tableZoom / 100}em` }}>
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -463,6 +456,9 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Adiciones
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total Devengado
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salud</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pensión</th>
@@ -523,16 +519,36 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                               <div className="text-green-600 text-xs">Bonif. venta: +${(calc.bonusCalculations?.salesBonus || 0).toLocaleString()}</div>
                             )}
                             {(calc.bonusCalculations?.fixedOvertime || 0) > 0 && (
-                              <div className="text-green-600 text-xs">H. extra fijas: +${(calc.bonusCalculations?.fixedOvertime || 0).toLocaleString()}</div>
+                              <div className="text-green-600 text-xs">
+                                H. extra fijas {(() => {
+                                  const hoursNovelty = calc.novelties.find(n => n.type === 'FIXED_OVERTIME');
+                                  return hoursNovelty?.hours ? `(${hoursNovelty.hours} horas)` : '';
+                                })()}: +${(calc.bonusCalculations?.fixedOvertime || 0).toLocaleString()}
+                              </div>
                             )}
                             {(calc.bonusCalculations?.unexpectedOvertime || 0) > 0 && (
-                              <div className="text-green-600 text-xs">H. extra NE: +${(calc.bonusCalculations?.unexpectedOvertime || 0).toLocaleString()}</div>
+                              <div className="text-green-600 text-xs">
+                                H. extra NE {(() => {
+                                  const hoursNovelty = calc.novelties.find(n => n.type === 'UNEXPECTED_OVERTIME');
+                                  return hoursNovelty?.hours ? `(${hoursNovelty.hours} horas)` : '';
+                                })()}: +${(calc.bonusCalculations?.unexpectedOvertime || 0).toLocaleString()}
+                              </div>
                             )}
                             {(calc.bonusCalculations?.nightSurcharge || 0) > 0 && (
-                              <div className="text-green-600 text-xs">Recargos noc.: +${(calc.bonusCalculations?.nightSurcharge || 0).toLocaleString()}</div>
+                              <div className="text-green-600 text-xs">
+                                Recargos noc. {(() => {
+                                  const hoursNovelty = calc.novelties.find(n => n.type === 'NIGHT_SURCHARGE');
+                                  return hoursNovelty?.hours ? `(${hoursNovelty.hours} horas)` : '';
+                                })()}: +${(calc.bonusCalculations?.nightSurcharge || 0).toLocaleString()}
+                              </div>
                             )}
                             {(calc.bonusCalculations?.sundayWork || 0) > 0 && (
-                              <div className="text-green-600 text-xs">Festivos: +${(calc.bonusCalculations?.sundayWork || 0).toLocaleString()}</div>
+                              <div className="text-green-600 text-xs">
+                                Festivos {(() => {
+                                  const daysNovelty = calc.novelties.find(n => n.type === 'SUNDAY_WORK');
+                                  return daysNovelty?.days ? `(${daysNovelty.days} días)` : '';
+                                })()}: +${(calc.bonusCalculations?.sundayWork || 0).toLocaleString()}
+                              </div>
                             )}
                             {(calc.bonusCalculations?.gasAllowance || 0) > 0 && (
                               <div className="text-green-600 text-xs">Aux. gasolina: +${(calc.bonusCalculations?.gasAllowance || 0).toLocaleString()}</div>
@@ -544,6 +560,9 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                         ) : (
                           <span className="text-black">-</span>
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">
+                        ${(calc.totalEarned ?? 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         {(calc.deductions?.health ?? 0) > 0 ? (
@@ -623,6 +642,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                   ))}
                 </tbody>
               </table>
+            </div>
           </div>
         </div>
       )}

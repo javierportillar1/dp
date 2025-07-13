@@ -65,6 +65,15 @@ function App() {
   const [payrollCalculations, setPayroll]       = useLocalStorage<PayrollCalculation[]>('payrollCalculations', []);
   const [deductionRates, setDeductionRates]     = useLocalStorage<DeductionRates>      ('deductionRates',    DEFAULT_DEDUCTION_RATES);
 
+  // Migration function to add isPensioned field to existing employees
+  React.useEffect(() => {
+    setEmployees(prev => 
+      prev.map(emp => ({
+        ...emp,
+        isPensioned: emp.isPensioned ?? false
+      }))
+    );
+  }, [setEmployees]);
   /* -----------------------------------------------------------------------
      Actualiza workedDays cada hora (UTC-5) sin sobrescribir en caliente
   ----------------------------------------------------------------------- */

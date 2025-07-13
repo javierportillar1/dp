@@ -10,6 +10,7 @@ export interface Employee {
   salary: number;
   workedDays: number;
   createdDate?: string;
+  isPensioned: boolean;
 }
 
 export interface Novelty {
@@ -52,6 +53,7 @@ export interface PayrollCalculation {
   discountedDays: number;
   transportAllowance: number;
   grossSalary: number;
+  totalEarned: number;
   bonuses: number;
   bonusCalculations: {
     fixedCompensation: number;

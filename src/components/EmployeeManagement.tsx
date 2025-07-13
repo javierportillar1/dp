@@ -41,6 +41,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
     cedula: '',
     salary: '',
     createdDate: new Date().toISOString().slice(0, 10),
+    isPensioned: false,
   });
 
   const sortedEmployees = [...employees].sort((a, b) => a.name.localeCompare(b.name));
@@ -56,6 +57,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
       cedula: '',
       salary: '',
       createdDate: new Date().toISOString().slice(0, 10),
+      isPensioned: false,
     });
     setEditingEmployee(null);
   };
@@ -67,6 +69,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
       ...formData,
       dateOfBirth: formData.dateOfBirth,
       salary: parseFloat(formData.salary),
+      isPensioned: formData.isPensioned,
       workedDays: editingEmployee ? editingEmployee.workedDays : calculateWorkedDays(formData.createdDate),
       createdDate: editingEmployee ? editingEmployee.createdDate : formData.createdDate,
     };
@@ -99,6 +102,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
       cedula: employee.cedula,
       salary: employee.salary.toString(),
       createdDate: employee.createdDate || new Date().toISOString().slice(0, 10),
+      isPensioned: employee.isPensioned || false,
     });
     setIsFormOpen(true);
   };
@@ -236,6 +240,19 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
                   />
                 </div>
                 
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isPensioned"
+                    checked={formData.isPensioned}
+                    onChange={(e) => setFormData({ ...formData, isPensioned: e.target.checked })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isPensioned" className="text-sm font-medium text-gray-700">
+                    Empleado pensionado
+                  </label>
+                </div>
+                
                 {!editingEmployee && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -320,6 +337,9 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
               <div className="pt-2 border-t">
                 <p className="text-gray-600">Salario: <span className="font-semibold">${employee.salary.toLocaleString()}</span></p>
                 <p className="text-gray-600">Días trabajados totales: <span className="font-semibold">{employee.workedDays}</span></p>
+                {employee.isPensioned && (
+                  <p className="text-blue-600 text-sm font-medium">✓ Empleado pensionado</p>
+                )}
               </div>
             </div>
           </div>

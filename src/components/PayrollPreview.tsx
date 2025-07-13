@@ -14,6 +14,34 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
   const totalAdvances = payrollCalculations.reduce((sum, calc) => sum + calc.deductions.advance, 0);
   const totalBonuses = payrollCalculations.reduce((sum, calc) => sum + (calc.bonusCalculations?.total || calc.bonuses || 0), 0);
 
+  const getNoveltyDisplayText = (novelty: any) => {
+    const typeLabels: Record<string, string> = {
+      'FIXED_COMPENSATION': 'Compensatorios fijos',
+      'SALES_BONUS': 'Bonificación en venta',
+      'FIXED_OVERTIME': 'Horas extra fijas',
+      'UNEXPECTED_OVERTIME': 'Horas extra NE',
+      'NIGHT_SURCHARGE': 'Recargos nocturnos',
+      'SUNDAY_WORK': 'Festivos',
+      'GAS_ALLOWANCE': 'Auxilio de gasolina',
+      'PLAN_CORPORATIVO': 'Plan corporativo',
+      'RECORDAR': 'Recordar',
+      'INVENTARIOS_CRUCES': 'Inventarios y cruces',
+      'MULTAS': 'Multas',
+      'FONDO_EMPLEADOS': 'Fondo de empleados',
+      'CARTERA_EMPLEADOS': 'Cartera empleados'
+    };
+    
+    const label = typeLabels[novelty.type] || novelty.type;
+    let unitText = '';
+    
+    if (novelty.hours && novelty.hours > 0) {
+      unitText = ` (${novelty.hours} ${novelty.hours === 1 ? 'hora' : 'horas'})`;
+    } else if (novelty.days && novelty.days > 0) {
+      unitText = ` (${novelty.days} ${novelty.days === 1 ? 'día' : 'días'})`;
+    }
+    
+    return `${label}${unitText}`;
+  };
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -77,10 +105,10 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
             </div>
           </div>
 
-          {/* Detailed Employee Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Detailed Employee Cards - New Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {payrollCalculations.map((calc) => (
-              <div key={calc.employee.id} className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+              <div key={calc.employee.id} className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="bg-blue-100 p-2 rounded-full">
                     <User className="h-5 w-5 text-blue-600" />
@@ -91,218 +119,209 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
                   </div>
                 </div>
                 
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Salario Base</span>
-                    <span className="font-medium">${calc.baseSalary.toLocaleString()}</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Días Trabajados</span>
-                    <span className="font-medium">
-                      {calc.workedDays}/{calc.totalDaysInMonth}
-                      {calc.discountedDays > 0 && (
-                        <span className="text-red-600 ml-1">(-{calc.discountedDays})</span>
-                      )}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Salario Bruto</span>
-                    <span className="font-medium">${calc.grossSalary.toLocaleString()}</span>
-                  </div>
-                  
-                  {calc.transportAllowance > 0 && (
+                {/* Devengar Section */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-semibold text-green-800 mb-3 text-center">DEVENGAR</h4>
+                  <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Aux. Transporte</span>
-                      <span className="font-medium text-green-600">${calc.transportAllowance.toLocaleString()}</span>
+                      <span className="text-sm text-gray-700">Días trabajados al mes</span>
+                      <span className="font-medium">
+                        {calc.workedDays}/{calc.totalDaysInMonth}
+                        {calc.discountedDays > 0 && (
+                          <span className="text-red-600 ml-1">(-{calc.discountedDays})</span>
+                        )}
+                      </span>
                     </div>
-                  )}
-                  
-                  {(calc.bonusCalculations?.total || calc.bonuses || 0) > 0 && (
+                    {/* <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-700">Salario Base</span>
+                      <span className="font-medium">${calc.baseSalary.toLocaleString()}</span>
+                    </div> */}
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Adiciones</span>
-                      <span className="font-medium text-green-600">${(calc.bonusCalculations?.total || calc.bonuses || 0).toLocaleString()}</span>
+                      <span className="text-sm text-gray-700">Salario Bruto</span>
+                      <span className="font-medium">${calc.grossSalary.toLocaleString()}</span>
                     </div>
-                  )}
-                  
-                  <div className="border-t pt-3">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Salud</span>
-                      <span className="text-red-600">-${calc.deductions.health.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">Pensión</span>
-                      <span className="text-red-600">-${calc.deductions.pension.toLocaleString()}</span>
-                    </div>
-                    {calc.deductions.solidarity > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Solidaridad</span>
-                        <span className="text-red-600">-${calc.deductions.solidarity.toLocaleString()}</span>
+                    
+                    {calc.transportAllowance > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-700">Auxilio Transporte</span>
+                        <span className="font-medium text-green-600">${calc.transportAllowance.toLocaleString()}</span>
                       </div>
                     )}
-                    {calc.deductions.absence > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Ausencias</span>
-                        <span className="text-red-600">-${calc.deductions.absence.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {calc.deductions.planCorporativo > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Plan corporativo</span>
-                        <span className="text-red-600">-${calc.deductions.planCorporativo.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {calc.deductions.recordar > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Recordar</span>
-                        <span className="text-red-600">-${calc.deductions.recordar.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {calc.deductions.inventariosCruces > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Inventarios y cruces</span>
-                        <span className="text-red-600">-${calc.deductions.inventariosCruces.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {calc.deductions.multas > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Multas</span>
-                        <span className="text-red-600">-${calc.deductions.multas.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {calc.deductions.fondoEmpleados > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Fondo de empleados</span>
-                        <span className="text-red-600">-${calc.deductions.fondoEmpleados.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {calc.deductions.carteraEmpleados > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Cartera empleados</span>
-                        <span className="text-red-600">-${calc.deductions.carteraEmpleados.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {calc.deductions.advance > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Adelantos</span>
-                        <span className="text-red-600">-${calc.deductions.advance.toLocaleString()}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center text-sm font-medium border-t pt-2 mt-2">
-                      <span className="text-gray-900">Total Deducciones</span>
-                      <span className="text-red-600">-${calc.deductions.total.toLocaleString()}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="border-t pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-gray-900">Salario Neto</span>
-                      <span className="font-bold text-green-600 text-lg">${calc.netSalary.toLocaleString()}</span>
-                    </div>
-                  </div>
-                  
-                  {calc.novelties.length > 0 && (
-                    <div className="border-t pt-3">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Novedades</h4>
-                      <div className="space-y-1">
-                        {calc.novelties.map((novelty) => (
-                          <div key={novelty.id} className="text-xs text-gray-600">
-                            <span className="font-medium">{new Date(novelty.date).toLocaleDateString()}</span>: {(() => {
-                              const typeLabels: Record<string, string> = {
-                                'ABSENCE': 'Ausencia',
-                                'LATE': 'Llegada tarde',
-                                'EARLY_LEAVE': 'Salida temprana',
-                                'MEDICAL_LEAVE': 'Incapacidad médica',
-                                'VACATION': 'Vacaciones',
-                                'FIXED_COMPENSATION': 'Compensatorios fijos',
-                                'SALES_BONUS': 'Bonificación en venta',
-                                'FIXED_OVERTIME': 'Horas extra fijas',
-                                'UNEXPECTED_OVERTIME': 'Horas extra NE',
-                                'NIGHT_SURCHARGE': 'Recargos nocturnos',
-                                'SUNDAY_WORK': 'Festivos',
-                                'GAS_ALLOWANCE': 'Auxilio de gasolina'
-                                ,'PLAN_CORPORATIVO': 'Plan corporativo'
-                                ,'RECORDAR': 'Recordar'
-                                ,'INVENTARIOS_CRUCES': 'Inventarios y cruces'
-                                ,'MULTAS': 'Multas'
-                                ,'FONDO_EMPLEADOS': 'Fondo de empleados'
-                                ,'CARTERA_EMPLEADOS': 'Cartera empleados'
-                              };
-                              return typeLabels[novelty.type] || novelty.type;
-                            })()}
-                            {(novelty.discountDays > 0 || ['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type)) && (
-                              <span className="text-red-600 ml-1">
-                                {novelty.discountDays > 0 && `(-${novelty.discountDays} días)`}
-                              </span>
-                            )}
-                           {novelty.bonusAmount > 0 && !['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type) && (
-                              <span className={`ml-1 ${['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type) ? 'text-red-600' : 'text-green-600'}`}>
-                               (+$${novelty.bonusAmount.toLocaleString()})
-                             </span>
-                           )}
-                           {novelty.bonusAmount > 0 && ['PLAN_CORPORATIVO', 'RECORDAR', 'INVENTARIOS_CRUCES', 'MULTAS', 'FONDO_EMPLEADOS', 'CARTERA_EMPLEADOS'].includes(novelty.type) && (
-                             <span className="text-red-600 ml-1">
-                               (-$${novelty.bonusAmount.toLocaleString()})
-                              </span>
-                            )}
-                            {novelty.hours && novelty.hours > 0 && (
-                              <span className="text-blue-600 ml-1">({novelty.hours} horas)</span>
-                            )}
-                            {novelty.days && novelty.days > 0 && (
-                              <span className="text-purple-600 ml-1">({novelty.days} días)</span>
-                            )}
-                            {novelty.description && (
-                              <span className="text-gray-500 ml-1">- {novelty.description}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {calc.bonusCalculations && calc.bonusCalculations.total > 0 && (
-                    <div className="border-t pt-3">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Detalle de Adiciones</h4>
-                      <div className="space-y-1">
+                    
+                    {/* Novedades Adicionadas */}
+                    {calc.novelties.filter(n => 
+                      ['FIXED_COMPENSATION', 'SALES_BONUS', 'FIXED_OVERTIME', 'UNEXPECTED_OVERTIME', 'NIGHT_SURCHARGE', 'SUNDAY_WORK', 'GAS_ALLOWANCE'].includes(n.type)
+                    ).length > 0 && (
+                      <div className="border-t border-green-300 pt-2 mt-2">
+                        <h5 className="text-sm font-medium text-green-800 mb-2">Novedades Adicionadas:</h5>
                         {calc.bonusCalculations.fixedCompensation > 0 && (
-                          <div className="text-xs text-green-600">
-                            Compensatorios fijos: ${calc.bonusCalculations.fixedCompensation.toLocaleString()}
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">Compensatorios fijos</span>
+                            <span className="text-green-600 font-medium">${calc.bonusCalculations.fixedCompensation.toLocaleString()}</span>
                           </div>
                         )}
                         {calc.bonusCalculations.salesBonus > 0 && (
-                          <div className="text-xs text-green-600">
-                            Bonificación en venta: ${calc.bonusCalculations.salesBonus.toLocaleString()}
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">Bonificación en venta</span>
+                            <span className="text-green-600 font-medium">${calc.bonusCalculations.salesBonus.toLocaleString()}</span>
                           </div>
                         )}
                         {calc.bonusCalculations.fixedOvertime > 0 && (
-                          <div className="text-xs text-green-600">
-                            Horas extra fijas: ${calc.bonusCalculations.fixedOvertime.toLocaleString()}
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">
+                              Horas extra fijas {(() => {
+                                const hoursNovelty = calc.novelties.find(n => n.type === 'FIXED_OVERTIME');
+                                return hoursNovelty?.hours ? `(${hoursNovelty.hours} ${hoursNovelty.hours === 1 ? 'hora' : 'horas'})` : '';
+                              })()}
+                            </span>
+                            <span className="text-green-600 font-medium">${calc.bonusCalculations.fixedOvertime.toLocaleString()}</span>
                           </div>
                         )}
                         {calc.bonusCalculations.unexpectedOvertime > 0 && (
-                          <div className="text-xs text-green-600">
-                            Horas extra NE: ${calc.bonusCalculations.unexpectedOvertime.toLocaleString()}
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">
+                              Horas extra NE {(() => {
+                                const hoursNovelty = calc.novelties.find(n => n.type === 'UNEXPECTED_OVERTIME');
+                                return hoursNovelty?.hours ? `(${hoursNovelty.hours} ${hoursNovelty.hours === 1 ? 'hora' : 'horas'})` : '';
+                              })()}
+                            </span>
+                            <span className="text-green-600 font-medium">${calc.bonusCalculations.unexpectedOvertime.toLocaleString()}</span>
                           </div>
                         )}
                         {calc.bonusCalculations.nightSurcharge > 0 && (
-                          <div className="text-xs text-green-600">
-                            Recargos nocturnos: ${calc.bonusCalculations.nightSurcharge.toLocaleString()}
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">
+                              Recargos nocturnos {(() => {
+                                const hoursNovelty = calc.novelties.find(n => n.type === 'NIGHT_SURCHARGE');
+                                return hoursNovelty?.hours ? `(${hoursNovelty.hours} ${hoursNovelty.hours === 1 ? 'hora' : 'horas'})` : '';
+                              })()}
+                            </span>
+                            <span className="text-green-600 font-medium">${calc.bonusCalculations.nightSurcharge.toLocaleString()}</span>
                           </div>
                         )}
                         {calc.bonusCalculations.sundayWork > 0 && (
-                          <div className="text-xs text-green-600">
-                            Festivos: ${calc.bonusCalculations.sundayWork.toLocaleString()}
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">
+                              Festivos {(() => {
+                                const daysNovelty = calc.novelties.find(n => n.type === 'SUNDAY_WORK');
+                                return daysNovelty?.days ? `(${daysNovelty.days} ${daysNovelty.days === 1 ? 'día' : 'días'})` : '';
+                              })()}
+                            </span>
+                            <span className="text-green-600 font-medium">${calc.bonusCalculations.sundayWork.toLocaleString()}</span>
                           </div>
                         )}
                         {calc.bonusCalculations.gasAllowance > 0 && (
-                          <div className="text-xs text-green-600">
-                            Auxilio de gasolina: ${calc.bonusCalculations.gasAllowance.toLocaleString()}
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-700">Auxilio de gasolina</span>
+                            <span className="text-green-600 font-medium">${calc.bonusCalculations.gasAllowance.toLocaleString()}</span>
                           </div>
                         )}
                       </div>
+                    )}
+                    
+                    <div className="border-t border-green-300 pt-2 mt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-green-800">Total Devengado</span>
+                        <span className="font-bold text-green-700 text-lg">${(calc.totalEarned || 0).toLocaleString()}</span>
+                      </div>
                     </div>
-                  )}
+                  </div>
+                </div>
+
+                {/* Deducciones Section */}
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-semibold text-red-800 mb-3 text-center">DEDUCCIONES</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-700">Salud</span>
+                      <span className="text-red-600 font-medium">-${calc.deductions.health.toLocaleString()}</span>
+                    </div>
+                    
+                    {!calc.employee.isPensioned && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Pensión</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.pension.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.solidarity > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Solidaridad</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.solidarity.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.absence > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Ausencias</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.absence.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.planCorporativo > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Plan Corp.</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.planCorporativo.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.recordar > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Recordar</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.recordar.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.inventariosCruces > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Inventario</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.inventariosCruces.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.multas > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Multas</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.multas.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.fondoEmpleados > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">FondoEMP</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.fondoEmpleados.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.carteraEmpleados > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">CarteraEMP</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.carteraEmpleados.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {calc.deductions.advance > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">Adelantos (valor original)</span>
+                        <span className="text-red-600 font-medium">-${calc.deductions.advance.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    <div className="border-t border-red-300 pt-2 mt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-red-800">Total Deducciones</span>
+                        <span className="font-bold text-red-700 text-lg">-${calc.deductions.total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Salario Neto */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-blue-800 text-lg">SALARIO NETO</span>
+                    <span className="font-bold text-blue-700 text-2xl">${calc.netSalary.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             ))}
