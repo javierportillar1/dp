@@ -1,6 +1,3 @@
-Here's the fixed version with all missing closing brackets added:
-
-```typescript
                         return novelty.bonusAmount;
                       }
                       return 0;
