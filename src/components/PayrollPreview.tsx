@@ -1,10 +1,9 @@
 import React from 'react';
 import { FileText, User, Calendar, DollarSign, AlertCircle } from 'lucide-react';
-import { PayrollCalculation, AdvancePayment } from '../types';
+import { PayrollCalculation } from '../types';
 
 interface PayrollPreviewProps {
   payrollCalculations: PayrollCalculation[];
-  advances: AdvancePayment[];
 }
 
 export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculations }) => {
@@ -14,34 +13,6 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
   const totalAdvances = payrollCalculations.reduce((sum, calc) => sum + calc.deductions.advance, 0);
   const totalBonuses = payrollCalculations.reduce((sum, calc) => sum + (calc.bonusCalculations?.total || calc.bonuses || 0), 0);
 
-  const getNoveltyDisplayText = (novelty: any) => {
-    const typeLabels: Record<string, string> = {
-      'FIXED_COMPENSATION': 'Compensatorios fijos',
-      'SALES_BONUS': 'Bonificación en venta',
-      'FIXED_OVERTIME': 'Horas extra fijas',
-      'UNEXPECTED_OVERTIME': 'Horas extra NE',
-      'NIGHT_SURCHARGE': 'Recargos nocturnos',
-      'SUNDAY_WORK': 'Festivos',
-      'GAS_ALLOWANCE': 'Auxilio de gasolina',
-      'PLAN_CORPORATIVO': 'Plan corporativo',
-      'RECORDAR': 'Recordar',
-      'INVENTARIOS_CRUCES': 'Inventarios y cruces',
-      'MULTAS': 'Multas',
-      'FONDO_EMPLEADOS': 'Fondo de empleados',
-      'CARTERA_EMPLEADOS': 'Cartera empleados'
-    };
-    
-    const label = typeLabels[novelty.type] || novelty.type;
-    let unitText = '';
-    
-    if (novelty.hours && novelty.hours > 0) {
-      unitText = ` (${novelty.hours} ${novelty.hours === 1 ? 'hora' : 'horas'})`;
-    } else if (novelty.days && novelty.days > 0) {
-      unitText = ` (${novelty.days} ${novelty.days === 1 ? 'día' : 'días'})`;
-    }
-    
-    return `${label}${unitText}`;
-  };
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -91,7 +62,7 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
             <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-lg">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="h-6 w-6" />
-                <span className="text-sm font-medium">Adelantos</span>
+                <span className="text-sm font-medium">Anticipo Quincena</span>
               </div>
               <p className="text-2xl font-bold">${totalAdvances.toLocaleString()}</p>
             </div>
@@ -302,7 +273,7 @@ export const PayrollPreview: React.FC<PayrollPreviewProps> = ({ payrollCalculati
                     
                     {calc.deductions.advance > 0 && (
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-700">Adelantos (valor original)</span>
+                        <span className="text-gray-700">Anticipo Quincena (valor original)</span>
                         <span className="text-red-600 font-medium">-${calc.deductions.advance.toLocaleString()}</span>
                       </div>
                     )}

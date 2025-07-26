@@ -10,8 +10,8 @@ export const Navigation: React.FC<NavigationProps> = ({ activeSection, setActive
   const sections = [
     { id: 'employees', label: 'Empleados', icon: Users },
     { id: 'novelties', label: 'Novedades', icon: AlertCircle },
-    { id: 'advances', label: 'Adelantos', icon: CreditCard },
-    { id: 'calculator', label: 'Calculador', icon: Calculator },
+    { id: 'advances', label: 'Anticipo Quincena', icon: CreditCard },
+    { id: 'calculator', label: 'Pago Nómina', icon: Calculator },
     { id: 'preview', label: 'Previsualización', icon: FileText },
     { id: 'settings', label: 'Configuración', icon: Settings },
   ];

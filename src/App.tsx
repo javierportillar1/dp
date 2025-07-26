@@ -98,38 +98,8 @@ function App() {
 
   // Auto-apply recurring licenses for new months
   React.useEffect(() => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    
-    // Find all recurring licenses
-    const recurringLicenses = novelties.filter(n => 
-      n.isRecurring && 
-      n.startMonth && 
-      n.startMonth <= currentMonth
-    );
-    
-    // Check if we need to add licenses for current month
-    const newLicenses: Novelty[] = [];
-    
-    recurringLicenses.forEach(license => {
-      const existsForCurrentMonth = novelties.some(n => 
-        n.employeeId === license.employeeId &&
-        n.type === license.type &&
-        n.date.startsWith(currentMonth)
-      );
-      
-      if (!existsForCurrentMonth) {
-        newLicenses.push({
-          ...license,
-          id: crypto.randomUUID(),
-          date: `${currentMonth}-01`,
-          description: `${license.description} (Auto-aplicada desde ${license.startMonth})`
-        });
-      }
-    });
-    
-    if (newLicenses.length > 0) {
-      setNovelties(prev => [...prev, ...newLicenses]);
-    }
+    // Note: Recurring licenses are handled dynamically in PayrollCalculator
+    // This ensures they appear in the correct month's calculation without creating duplicate entries
   }, [novelties, setNovelties]);
   useEffect(() => {
     updateWorkedDays();                    // primera vez

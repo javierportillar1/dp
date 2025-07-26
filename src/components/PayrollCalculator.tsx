@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Calculator, Download, AlertCircle, TrendingUp, CreditCard, ZoomIn, ZoomOut } from 'lucide-react';
-import { Employee, Novelty, PayrollCalculation, AdvancePayment, DeductionRates, MINIMUM_SALARY_COLOMBIA, TRANSPORT_ALLOWANCE } from '../types';
+import { Employee, Novelty, PayrollCalculation, AdvancePayment, DeductionRates, MINIMUM_SALARY_COLOMBIA } from '../types';
 import { getDaysInMonth, formatMonthYear, parseMonthString, isEmployeeActiveInMonth } from '../utils/dateUtils';
+import { roundToNearest500Or1000 } from '../utils/financeUtils';
 
 const PAYROLL_DAYS = 30;
+
 
 interface PayrollCalculatorProps {
   employees: Employee[];
@@ -36,62 +38,134 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
     );
     
     const calculations: PayrollCalculation[] = activeEmployees.map(employee => {
-      const employeeNovelties = novelties.filter(n => n.employeeId === employee.id);
+      // Get all novelties for this employee
+      const allEmployeeNovelties = novelties.filter(n => n.employeeId === employee.id);
+      
+      // Get novelties that apply to the selected month
+      const monthlyNovelties = allEmployeeNovelties.filter(n => {
+        const noveltyMonth = n.date.slice(0, 7);
+        
+        // If it's a recurring license, check if it should apply to this month
+        if (n.isRecurring && n.startMonth) {
+          return n.startMonth <= selectedMonth;
+        }
+        
+        // For non-recurring novelties, only include if they're for this specific month
+        return noveltyMonth === selectedMonth;
+      });
+      
+      // For recurring licenses, create a virtual novelty for this month if it doesn't exist
+      const recurringLicenses = allEmployeeNovelties.filter(n => 
+        n.isRecurring && 
+        n.startMonth && 
+        n.startMonth <= selectedMonth &&
+        n.type === 'STUDY_LICENSE'
+      );
+      
+      // Add recurring licenses that don't have a specific entry for this month
+      recurringLicenses.forEach(license => {
+        const existsForThisMonth = monthlyNovelties.some(n => 
+          n.type === 'STUDY_LICENSE' && 
+          n.date.startsWith(selectedMonth)
+        );
+        
+        if (!existsForThisMonth) {
+          monthlyNovelties.push({
+            ...license,
+            id: `recurring-${license.id}-${selectedMonth}`,
+            date: `${selectedMonth}-01`,
+            description: `${license.description} (Licencia recurrente desde ${license.startMonth})`
+          });
+        }
+      });
+      
       const employeeAdvances = advances.filter(a => a.employeeId === employee.id && a.month === selectedMonth);
       
       // Calculate worked days for the month (total days in month, minus absences from THIS month)
-      const monthlyNovelties = employeeNovelties.filter(n => n.date.startsWith(selectedMonth));
       const monthlyDiscountedDays = monthlyNovelties.reduce((sum, n) => sum + n.discountDays, 0);
-      const workedDaysThisMonth = Math.max(0, PAYROLL_DAYS - monthlyDiscountedDays);
       
-      // Calculate daily salary
-      const dailySalary = employee.salary / PAYROLL_DAYS; // Always use 30 for daily salary calculation
+      // For new employees, calculate proportional days based on hire date
+      let workedDaysThisMonth = PAYROLL_DAYS;
       
+      if (employee.createdDate) {
+        const hireDate = new Date(employee.createdDate);
+        const { year: selectedYear, month: selectedMonthNum } = parseMonthString(selectedMonth);
+        const monthStart = new Date(selectedYear, selectedMonthNum - 1, 1);
+        const monthEnd = new Date(selectedYear, selectedMonthNum, 0);
+        
+        // If hired during this month, calculate proportional days
+        if (hireDate >= monthStart && hireDate <= monthEnd) {
+          const daysFromHire = monthEnd.getDate() - hireDate.getDate() + 1;
+          workedDaysThisMonth = Math.max(0, daysFromHire - monthlyDiscountedDays);
+        } else {
+          // If hired before this month, use full month minus absences
+          workedDaysThisMonth = Math.max(0, PAYROLL_DAYS - monthlyDiscountedDays);
+        }
+      } else {
+        workedDaysThisMonth = Math.max(0, PAYROLL_DAYS - monthlyDiscountedDays);
+      }
+      
+
+      // Calculate daily values and round immediately to avoid decimals
+      const dailySalary = roundToNearest500Or1000(employee.salary / PAYROLL_DAYS); // Always use 30 for daily salary calculation
+
       // Calculate gross salary based on worked days this month
-      const grossSalary = dailySalary * workedDaysThisMonth;
-      
+      const grossSalary = roundToNearest500Or1000(dailySalary * workedDaysThisMonth);
+
       // Calculate daily transport allowance using configurable rate
-      const dailyTransportAllowance = deductionRates.transportAllowance / PAYROLL_DAYS;
-      
+
+      const dailyTransportAllowance = roundToNearest500Or1000(
+        deductionRates.transportAllowance / PAYROLL_DAYS
+      );
+
       // Transport allowance (only for NOMINA employees earning less than 2 minimum salaries)
       const transportAllowance = (
         employee.contractType === 'NOMINA' &&
         employee.salary < (MINIMUM_SALARY_COLOMBIA * 2)
-        ) ? dailyTransportAllowance * workedDaysThisMonth : 0;
+        ) ? roundToNearest500Or1000(dailyTransportAllowance * workedDaysThisMonth) : 0;
         
       // Calculate bonuses from novelties of this month
       const bonusCalculations = calculateBonuses(monthlyNovelties, deductionRates);
       
       // Calculate deductions using configurable rates
-      const healthDeduction = grossSalary * (deductionRates.health / 100);
-      const pensionDeduction = employee.isPensioned ? 0 : grossSalary * (deductionRates.pension / 100);
-      const solidarityDeduction = employee.salary >= (MINIMUM_SALARY_COLOMBIA * 4) ? 
-        grossSalary * (deductionRates.solidarity / 100) : 0;
-      
-      const absenceDeduction = dailySalary * monthlyDiscountedDays;
+      const healthDeduction = roundToNearest500Or1000(grossSalary * (deductionRates.health / 100));
+      const pensionDeduction = employee.isPensioned ? 0 : roundToNearest500Or1000(grossSalary * (deductionRates.pension / 100));
+      const solidarityDeduction = employee.salary >= (MINIMUM_SALARY_COLOMBIA * 4) ?
+        roundToNearest500Or1000(grossSalary * (deductionRates.solidarity / 100)) : 0;
+
+      const absenceDeduction = roundToNearest500Or1000(dailySalary * monthlyDiscountedDays);
 
       const planCorporativo = monthlyNovelties
         .filter(n => n.type === 'PLAN_CORPORATIVO')
-        .reduce((sum, n) => sum + n.bonusAmount, 0);
-      const recordar = monthlyNovelties
+        .reduce((sum, n) => sum + roundToNearest500Or1000(n.bonusAmount), 0);
+        // .reduce((sum, n) => sum + n.bonusAmount, 0);
+        
+        const recordar = monthlyNovelties
         .filter(n => n.type === 'RECORDAR')
-        .reduce((sum, n) => sum + n.bonusAmount, 0);
-      const inventariosCruces = monthlyNovelties
+        .reduce((sum, n) => sum + roundToNearest500Or1000(n.bonusAmount), 0);
+        // .reduce((sum, n) => sum + n.bonusAmount, 0);
+        const inventariosCruces = monthlyNovelties
         .filter(n => n.type === 'INVENTARIOS_CRUCES')
-        .reduce((sum, n) => sum + n.bonusAmount, 0);
-      const multas = monthlyNovelties
+        .reduce((sum, n) => sum + roundToNearest500Or1000(n.bonusAmount), 0);
+        // .reduce((sum, n) => sum + n.bonusAmount, 0);
+        const multas = monthlyNovelties
         .filter(n => n.type === 'MULTAS')
-        .reduce((sum, n) => sum + n.bonusAmount, 0);
-      const fondoEmpleadosDed = monthlyNovelties
+        .reduce((sum, n) => sum + roundToNearest500Or1000(n.bonusAmount), 0);
+        // .reduce((sum, n) => sum + n.bonusAmount, 0);
+        const fondoEmpleadosDed = monthlyNovelties
         .filter(n => n.type === 'FONDO_EMPLEADOS')
-        .reduce((sum, n) => sum + n.bonusAmount, 0);
-      const carteraEmpleadosDed = monthlyNovelties
+        .reduce((sum, n) => sum + roundToNearest500Or1000(n.bonusAmount), 0);
+        // .reduce((sum, n) => sum + n.bonusAmount, 0);
+        const carteraEmpleadosDed = monthlyNovelties
         .filter(n => n.type === 'CARTERA_EMPLEADOS')
-        .reduce((sum, n) => sum + n.bonusAmount, 0);
+        .reduce((sum, n) => sum + roundToNearest500Or1000(n.bonusAmount), 0);
+        // .reduce((sum, n) => sum + n.bonusAmount, 0);
 
-      const totalAdvances = employeeAdvances.reduce((sum, adv) => sum + adv.amount, 0);
+      const totalAdvances = roundToNearest500Or1000(
+        employeeAdvances.reduce((sum, adv) => sum + adv.amount, 0)
+      );
 
-      const totalDeductions =
+      const totalDeductions = roundToNearest500Or1000(
         healthDeduction +
         pensionDeduction +
         solidarityDeduction +
@@ -102,9 +176,12 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
         multas +
         fondoEmpleadosDed +
         carteraEmpleadosDed +
-        totalAdvances;
-      const netSalary = grossSalary + transportAllowance + bonusCalculations.total - totalDeductions;
-      const totalEarned = grossSalary + transportAllowance + bonusCalculations.total;
+        totalAdvances
+      );
+      
+      const rawTotalEarned = grossSalary + transportAllowance + bonusCalculations.total;
+      const totalEarned = roundToNearest500Or1000(rawTotalEarned);
+      const netSalary = roundToNearest500Or1000(totalEarned - totalDeductions);
       
       return {
         employee,
@@ -156,48 +233,58 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
     novelties.forEach(novelty => {
       switch (novelty.type) {
         case 'FIXED_COMPENSATION':
-          calculations.fixedCompensation += novelty.bonusAmount;
+          calculations.fixedCompensation += roundToNearest500Or1000(novelty.bonusAmount);
           break;
         case 'SALES_BONUS':
-          calculations.salesBonus += novelty.bonusAmount;
+          calculations.salesBonus += roundToNearest500Or1000(novelty.bonusAmount);
           break;
         case 'FIXED_OVERTIME': {
           // Horas extra fijas: horas × hora ordinaria
-          const fixedOvertimeAmount = novelty.bonusAmount || ((novelty.hours || 0) * rates.ordinaryHour);
+          const fixedOvertimeAmount = roundToNearest500Or1000(
+            novelty.bonusAmount || ((novelty.hours || 0) * rates.ordinaryHour)
+          );
           calculations.fixedOvertime += fixedOvertimeAmount;
           break;
         }
         case 'UNEXPECTED_OVERTIME': {
           // Horas extra NE: horas × horas extra
-          const unexpectedOvertimeAmount = novelty.bonusAmount || ((novelty.hours || 0) * rates.overtime);
+          const unexpectedOvertimeAmount = roundToNearest500Or1000(
+            novelty.bonusAmount || ((novelty.hours || 0) * rates.overtime)
+          );
           calculations.unexpectedOvertime += unexpectedOvertimeAmount;
           break;
         }
         case 'NIGHT_SURCHARGE': {
           // Recargos nocturnos: horas × recargos nocturnos
-          const nightSurchargeAmount = novelty.bonusAmount || ((novelty.hours || 0) * rates.nightSurcharge);
+          const nightSurchargeAmount = roundToNearest500Or1000(
+            novelty.bonusAmount || ((novelty.hours || 0) * rates.nightSurcharge)
+          );
           calculations.nightSurcharge += nightSurchargeAmount;
           break;
         }
         case 'SUNDAY_WORK': {
           // Festivos: días × dominical 1
-          const sundayWorkAmount = novelty.bonusAmount || ((novelty.days || 0) * rates.sunday1);
+          const sundayWorkAmount = roundToNearest500Or1000(
+            novelty.bonusAmount || ((novelty.days || 0) * rates.sunday1)
+          );
           calculations.sundayWork += sundayWorkAmount;
           break;
         }
         case 'GAS_ALLOWANCE':
-          calculations.gasAllowance += novelty.bonusAmount;
+          calculations.gasAllowance += roundToNearest500Or1000(novelty.bonusAmount);
           break;
         case 'STUDY_LICENSE':
-          calculations.studyLicense += novelty.bonusAmount;
+          calculations.studyLicense += roundToNearest500Or1000(novelty.bonusAmount);
           break;
       }
     });
 
-    calculations.total = calculations.fixedCompensation + calculations.salesBonus + 
-                       calculations.fixedOvertime + calculations.unexpectedOvertime + 
-                       calculations.nightSurcharge + calculations.sundayWork + 
-                       calculations.gasAllowance + calculations.studyLicense;
+    calculations.total = roundToNearest500Or1000(
+      calculations.fixedCompensation + calculations.salesBonus +
+      calculations.fixedOvertime + calculations.unexpectedOvertime +
+      calculations.nightSurcharge + calculations.sundayWork +
+      calculations.gasAllowance + calculations.studyLicense
+    );
 
     return calculations;
   };
@@ -281,7 +368,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
         txtContent += `     - Cartera empleados: $${(calc.deductions?.carteraEmpleados ?? 0).toLocaleString()}\n`;
       }
       if ((calc.deductions?.advance ?? 0) > 0) {
-        txtContent += `     - Adelantos: $${(calc.deductions?.advance ?? 0).toLocaleString()}\n`;
+        txtContent += `     - Anticipo Quincena: $${(calc.deductions?.advance ?? 0).toLocaleString()}\n`;
       }
       txtContent += `     - Total Deducciones: $${(calc.deductions?.total ?? 0).toLocaleString()}\n`;
       txtContent += `   SALARIO NETO: $${(calc.netSalary ?? 0).toLocaleString()}\n`;
@@ -295,7 +382,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
       
       const employeeAdvances = advances.filter(a => a.employeeId === calc.employee.id && a.month === selectedMonth);
       if (employeeAdvances.length > 0) {
-        txtContent += `   Adelantos del mes:\n`;
+        txtContent += `   Anticipo Quincena del mes:\n`;
         employeeAdvances.forEach(advance => {
           txtContent += `     - ${advance.date}: $${advance.amount.toLocaleString()} - ${advance.description || 'Sin descripción'}\n`;
         });
@@ -312,7 +399,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
     txtContent += `RESUMEN:\n`;
     txtContent += `Total Salarios Brutos: $${payrollCalculations.reduce((sum, calc) => sum + (calc.grossSalary ?? 0), 0).toLocaleString()}\n`;
     txtContent += `Total Deducciones: $${payrollCalculations.reduce((sum, calc) => sum + (calc.deductions?.total ?? 0), 0).toLocaleString()}\n`;
-    txtContent += `Total Adelantos: $${totalAdvancesMonth.toLocaleString()}\n`;
+    txtContent += `Total Anticipo Quincena: $${totalAdvancesMonth.toLocaleString()}\n`;
     txtContent += `TOTAL NÓMINA NETA: $${totalNet.toLocaleString()}\n`;
     
     const blob = new Blob([txtContent], { type: 'text/plain' });
@@ -435,7 +522,7 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
             <div className="bg-purple-50 p-4 rounded-lg">
               <div className="flex items-center space-x-2">
                 <CreditCard className="h-5 w-5 text-purple-600" />
-                <span className="text-sm font-medium text-purple-600">Adelantos</span>
+                <span className="text-sm font-medium text-purple-600">Anticipo Quincena</span>
               </div>
               <p className="text-2xl font-bold text-purple-900">${totalAdvancesMonth.toLocaleString()}</p>
             </div>
@@ -450,10 +537,13 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                       Empleado
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Sueldo Básico
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Días Trabajados
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Salario Bruto
+                      Sueldo Mes
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Aux. Transporte
@@ -471,9 +561,9 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recordar</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inventarios</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Multas</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fondo Emp.</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aporte Fondo Emp.</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cartera Emp.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Adelantos</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anticipo Quincena</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Ded.</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Salario Neto
@@ -494,15 +584,15 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${(calc.baseSalary ?? 0).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div>
                           <span className="font-medium">{calc.workedDays}/{calc.totalDaysInMonth}</span>
                           {calc.discountedDays > 0 && (
                             <div className="text-red-600 text-xs">
                               -{calc.discountedDays} días descontados
                             </div>
-                          )}
-                          {(calc.bonusCalculations?.studyLicense || 0) > 0 && (
-                            <div className="text-green-600 text-xs">Lic. estudio: +${(calc.bonusCalculations?.studyLicense || 0).toLocaleString()}</div>
                           )}
                         </div>
                       </td>
@@ -559,6 +649,9 @@ export const PayrollCalculator: React.FC<PayrollCalculatorProps> = ({
                             )}
                             {(calc.bonusCalculations?.gasAllowance || 0) > 0 && (
                               <div className="text-green-600 text-xs">Aux. gasolina: +${(calc.bonusCalculations?.gasAllowance || 0).toLocaleString()}</div>
+                            )}
+                            {(calc.bonusCalculations?.studyLicense || 0) > 0 && (
+                              <div className="text-green-600 text-xs">Lic. estudio: +${(calc.bonusCalculations?.studyLicense || 0).toLocaleString()}</div>
                             )}
                             <div className="font-medium text-green-600 border-t pt-1">
                               Total: +${(calc.bonusCalculations?.total || 0).toLocaleString()}

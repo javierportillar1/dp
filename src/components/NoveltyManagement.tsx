@@ -108,26 +108,48 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     }
   ];
 
-  // Get employees with and without novelties for selected month
-  const employeesWithNovelties = novelties
-    .filter(novelty => novelty.date.startsWith(selectedMonth))
-    .map(novelty => novelty.employeeId);
-  
+  // Build novelties list for the selected month, including recurring licenses
+  const displayedNovelties: Novelty[] = novelties.reduce((acc: Novelty[], n) => {
+    const noveltyMonth = n.date.slice(0, 7);
+
+    if (n.isRecurring && n.startMonth && n.startMonth <= selectedMonth) {
+      const existsForThisMonth = novelties.some(other =>
+        other.employeeId === n.employeeId &&
+        other.type === n.type &&
+        other.date.slice(0, 7) === selectedMonth
+      );
+
+      if (existsForThisMonth) {
+        if (noveltyMonth === selectedMonth) acc.push(n);
+      } else {
+        acc.push({
+          ...n,
+          id: `recurring-${n.id}-${selectedMonth}`,
+          date: `${selectedMonth}-01`,
+          description: `${n.description} (Licencia recurrente desde ${n.startMonth})`
+        });
+      }
+    } else if (noveltyMonth === selectedMonth) {
+      acc.push(n);
+    }
+    return acc;
+  }, [] as Novelty[]);
+
+  const employeesWithNovelties = Array.from(new Set(displayedNovelties.map(n => n.employeeId)));
+
   const employeesWithoutNovelties = employees
     .filter(emp => !employeesWithNovelties.includes(emp.id))
     .sort((a, b) => a.name.localeCompare(b.name));
-  
+
   const employeesWithNoveltiesData = employees
     .filter(emp => employeesWithNovelties.includes(emp.id))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const noveltiesByEmployee = novelties
-    .filter(novelty => novelty.date.startsWith(selectedMonth))
-    .reduce<Record<string, Novelty[]>>((acc, novelty) => {
-      if (!acc[novelty.employeeId]) acc[novelty.employeeId] = [];
-      acc[novelty.employeeId].push(novelty);
-      return acc;
-    }, {});
+  const noveltiesByEmployee = displayedNovelties.reduce<Record<string, Novelty[]>>((acc, novelty) => {
+    if (!acc[novelty.employeeId]) acc[novelty.employeeId] = [];
+    acc[novelty.employeeId].push(novelty);
+    return acc;
+  }, {});
 
   const getNoveltyTypeInfo = (type: Novelty['type']) => {
     for (const category of noveltyCategories) {
@@ -167,7 +189,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
 
     // Check if this is a recurring license
     const isRecurringLicense = formData.type === 'STUDY_LICENSE';
-    const currentMonth = formData.date.slice(0, 7);
+    const noveltyMonth = formData.date.slice(0, 7);
 
     const baseNovelty = {
       employeeId: formData.employeeId,
@@ -181,7 +203,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
       days: typeInfo.unitType === 'DAYS' && !['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(formData.type) ? value : undefined,
       unitType: typeInfo.unitType,
       isRecurring: isRecurringLicense,
-      startMonth: isRecurringLicense ? currentMonth : undefined,
+      startMonth: isRecurringLicense ? noveltyMonth : undefined,
     };
 
     if (editingNovelty) {
@@ -250,7 +272,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
     setFormData({
       employeeId,
       type: (category?.types[0].value || 'ABSENCE') as Novelty['type'],
-      date: new Date().toISOString().slice(0, 10),
+      date: `${selectedMonth}-01`,
       description: '',
       value: '1',
     });
@@ -326,7 +348,7 @@ export const NoveltyManagement: React.FC<NoveltyManagementProps> = ({
             employeeId,
             employeeName: employee.name,
             type: data.type,
-            date: new Date().toISOString().slice(0, 10),
+            date: `${selectedMonth}-01`,
             description: data.description || '',
             discountDays: typeInfo.unitType === 'DAYS' && ['ABSENCE', 'LATE', 'EARLY_LEAVE', 'MEDICAL_LEAVE', 'VACATION'].includes(data.type) ? value : 0,
             bonusAmount: typeInfo.unitType === 'MONEY' ? value : 0,

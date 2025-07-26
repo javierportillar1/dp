@@ -91,7 +91,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
   };
 
   const handleDelete = (advanceId: string) => {
-    if (confirm('¿Estás seguro de que quieres eliminar este adelanto?')) {
+    if (confirm('¿Estás seguro de que quieres eliminar este Anticipo?')) {
       setAdvances(advances.filter(a => a.id !== advanceId));
     }
   };
@@ -177,7 +177,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Gestión de Adelantos</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Gestión de Anticipo Quincena</h2>
         <div className="flex items-center space-x-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -195,7 +195,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
             className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            <span>Adelanto Individual</span>
+            <span>Anticipo Individual</span>
           </button>
         </div>
       </div>
@@ -204,11 +204,11 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
       <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-lg">
         <div className="flex items-center space-x-2 mb-2">
           <CreditCard className="h-6 w-6" />
-          <span className="text-lg font-medium">Total Adelantos - {formatMonthYear(selectedMonth)}</span>
+          <span className="text-lg font-medium">Total Anticipo Quincena - {formatMonthYear(selectedMonth)}</span>
         </div>
         <p className="text-3xl font-bold">${totalAdvances.toLocaleString()}</p>
         <p className="text-purple-100 text-sm">
-          {employeesWithAdvances.length} empleados con adelantos
+          {employeesWithAdvances.length} empleados con Anticipo Quincena
         </p>
       </div>
 
@@ -218,7 +218,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
           <div className="px-6 py-4 border-b border-gray-200 bg-blue-50">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold text-blue-900">
-                Empleados sin Adelantos - {formatMonthYear(selectedMonth)}
+                Empleados sin Anticipo Quincena - {formatMonthYear(selectedMonth)}
               </h3>
               {Object.keys(bulkAdvanceData).length > 0 && (
                 <button
@@ -226,7 +226,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                 >
                   <Save className="h-4 w-4" />
-                  <span>Guardar Adelantos</span>
+                  <span>Guardar Anticipo Quincena</span>
                 </button>
               )}
             </div>
@@ -249,7 +249,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
                       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           <div className="flex flex-col space-y-1">
-                            <label className="text-xs font-medium text-gray-700">Adelanto</label>
+                            <label className="text-xs font-medium text-gray-700">Anticipo</label>
                             <div className="flex items-center space-x-1">
                               <DollarSign className="h-3 w-3 text-gray-400" />
                               <input
@@ -317,10 +317,10 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
                         className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors"
                       >
                         <Edit className="h-4 w-4" />
-                        <span>Agregar Adelanto</span>
+                        <span>Agregar Anticipo</span>
                       </button>
                       <div className="text-xs text-gray-500">
-                        Adelanto • Fondo Emp. • Cartera Emp.
+                        Anticipo • Fondo Emp. • Cartera Emp.
                       </div>
                     </div>
                   )}
@@ -336,7 +336,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
         <div className="bg-white rounded-lg shadow-md border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200 bg-green-50">
             <h3 className="text-lg font-semibold text-green-900">
-              Empleados con Adelantos Registrados - {formatMonthYear(selectedMonth)}
+              Empleados con Anticipo Quincena Registrados - {formatMonthYear(selectedMonth)}
             </h3>
           </div>
           
@@ -348,16 +348,16 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
                     Empleado
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                    Total Anticipo
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fondo Emp.
+                    Aporte Fondo Emp.
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cartera Emp.
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    A descontar
+                    Neto a Pagar
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fecha
@@ -443,7 +443,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h3 className="text-lg font-semibold mb-4">
-              {editingAdvance ? 'Editar Adelanto' : 'Registrar Adelanto Individual'}
+              {editingAdvance ? 'Editar Anticipo' : 'Registrar Anticipo Individual'}
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -468,7 +468,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Monto del Adelanto
+                  Monto del Anticipo
                 </label>
                 <input
                   type="number"
@@ -505,7 +505,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha del Adelanto
+                  Fecha del Anticipo
                 </label>
                 <input
                   type="date"
@@ -538,7 +538,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Motivo del adelanto (opcional)"
+                  placeholder="Motivo del Anticipo (opcional)"
                 />
               </div>
               
@@ -567,7 +567,7 @@ export const AdvanceManagement: React.FC<AdvanceManagementProps> = ({
           <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No hay empleados registrados</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Primero registra empleados para poder gestionar adelantos.
+            Primero registra empleados para poder gestionar Anticipo Quincena.
           </p>
         </div>
       )}

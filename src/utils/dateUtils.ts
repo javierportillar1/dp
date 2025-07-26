@@ -28,9 +28,9 @@ export const isEmployeeActiveInMonth = (employee: Employee, monthString: string)
   if (!employee.createdDate) return true; // If no creation date, assume they were active
 
   const { year: selectedYear, month: selectedMonth } = parseMonthString(monthString);
-  const createdDate = new Date(employee.createdDate);
-  const selectedDate = new Date(selectedYear, selectedMonth - 1, 1); // First day of selected month
+  const hireDate = new Date(employee.createdDate);
+  const monthEnd = new Date(selectedYear, selectedMonth, 0); // Last day of selected month
 
   // Employee is active if they were hired before or during the selected month
-  return createdDate <= selectedDate;
+  return hireDate <= monthEnd;
 };
